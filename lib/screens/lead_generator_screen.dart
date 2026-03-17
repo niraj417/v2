@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/lead_generator_service.dart';
 import '../providers/lead_provider.dart';
 import '../providers/history_provider.dart';
+import '../providers/scraper_provider.dart';
+import '../services/scraper/scraper_engine.dart';
 
 class LeadGeneratorScreen extends ConsumerStatefulWidget {
   const LeadGeneratorScreen({super.key});
@@ -40,21 +41,31 @@ class _LeadGeneratorScreenState extends ConsumerState<LeadGeneratorScreen> {
       _lastGeneratedCount = null;
     });
 
-    final generator = LeadGeneratorService();
+    final engine = ref.read(scraperEngineProvider);
+    
     try {
-      final count = await generator.generateLeads(keyword, location);
-      setState(() {
-        _lastGeneratedCount = count;
-      });
-      // Refresh providers
-      ref.read(leadListProvider.notifier).loadLeads();
-      ref.read(historyProvider.notifier).loadHistory();
-
+      await engine.scrape(
+        keyword, 
+        location, 
+        targetCount: 50, 
+        onProgress: (status) {
+          ref.read(scraperStatusProvider.notifier).state = status;
+          
+          if (status.isComplete) {
+            setState(() {
+              _lastGeneratedCount = status.importedCount;
+              _isLoading = false;
+            });
+            // Refresh providers
+            ref.read(leadListProvider.notifier).loadLeads();
+            ref.read(historyProvider.notifier).loadHistory();
+          }
+        },
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error generating leads: $e')),
       );
-    } finally {
       setState(() {
         _isLoading = false;
       });
@@ -63,6 +74,8 @@ class _LeadGeneratorScreenState extends ConsumerState<LeadGeneratorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scraperStatus = ref.watch(scraperStatusProvider);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Discover Leads', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -129,6 +142,51 @@ class _LeadGeneratorScreenState extends ConsumerState<LeadGeneratorScreen> {
                   ),
                 ),
               ),
+
+              if (_isLoading) ...[
+                const SizedBox(height: 32),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              scraperStatus.currentAction,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      LinearProgressIndicator(
+                        value: scraperStatus.importedCount > 0 ? (scraperStatus.importedCount / 50) : null,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Found: ${scraperStatus.foundCount}'),
+                          Text('Imported: ${scraperStatus.importedCount} / 50'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
 
               if (_lastGeneratedCount != null) ...[
                 const SizedBox(height: 32),
