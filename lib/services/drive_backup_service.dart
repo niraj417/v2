@@ -25,10 +25,11 @@ class DriveBackupService {
     try {
       final scopes = [drive.DriveApi.driveFileScope];
       
+      // Force sign out to ensure account picker and permission prompts appear
+      await _googleSignIn.signOut();
+      
       // Ensure initialized
-      await _googleSignIn.initialize(); 
-
-      // Use authenticate()
+      await _googleSignIn.initialize();
       final account = await _googleSignIn.authenticate(scopeHint: scopes);
       
       final authHeaders = await account.authorizationClient.authorizationHeaders(scopes);
@@ -77,8 +78,10 @@ class DriveBackupService {
   Future<void> restoreDatabaseFromDrive(BuildContext? context) async {
     try {
       final scopes = [drive.DriveApi.driveFileScope];
+      // Force sign out to show account picker
+      await _googleSignIn.signOut();
+      
       await _googleSignIn.initialize();
-      // Use authenticate()
       final account = await _googleSignIn.authenticate(scopeHint: scopes);
 
       final authHeaders = await account.authorizationClient.authorizationHeaders(scopes);

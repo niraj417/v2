@@ -80,6 +80,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               const SizedBox(height: 48),
               TextField(
                 controller: _emailController,
+                style: const TextStyle(color: Colors.black),
                 decoration: InputDecoration(
                   labelText: 'Email',
                   prefixIcon: const Icon(Icons.email_outlined),
@@ -92,6 +93,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               const SizedBox(height: 16),
               TextField(
                 controller: _passwordController,
+                style: const TextStyle(color: Colors.black),
                 decoration: InputDecoration(
                   labelText: 'Password',
                   prefixIcon: const Icon(Icons.lock_outline),

@@ -132,16 +132,16 @@ class _LeadsListScreenState extends ConsumerState<LeadsListScreen> {
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                color: _getStatusColor(lead.leadStatus).withValues(alpha: 0.1),
+                                color: _getStatusColor(lead.leadStatus).withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                lead.leadStatus,
+                                'Status: ${lead.leadStatus}',
                                 style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
                                   color: _getStatusColor(lead.leadStatus),
                                 ),
                               ),
