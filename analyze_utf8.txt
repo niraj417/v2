@@ -1,0 +1,48 @@
+﻿Analyzing crm_leads_app...                                      
+
+  error - The function 'StateNotifierProvider' isn't defined - lib\providers\history_provider.dart:4:25 - undefined_function
+  error - Classes can only extend other classes - lib\providers\history_provider.dart:8:31 - extends_non_class
+  error - Too many positional arguments: 0 expected, but 1 found - lib\providers\history_provider.dart:9:29 - extra_positional_arguments
+  error - Undefined name 'state' - lib\providers\history_provider.dart:14:5 - undefined_identifier
+  error - Undefined name 'state' - lib\providers\history_provider.dart:17:7 - undefined_identifier
+  error - Undefined name 'state' - lib\providers\history_provider.dart:19:7 - undefined_identifier
+  error - The function 'StateNotifierProvider' isn't defined - lib\providers\lead_provider.dart:5:26 - undefined_function
+  error - Classes can only extend other classes - lib\providers\lead_provider.dart:9:32 - extends_non_class
+  error - Too many positional arguments: 0 expected, but 1 found - lib\providers\lead_provider.dart:10:30 - extra_positional_arguments
+  error - Undefined name 'state' - lib\providers\lead_provider.dart:15:5 - undefined_identifier
+  error - Undefined name 'state' - lib\providers\lead_provider.dart:18:7 - undefined_identifier
+  error - Undefined name 'state' - lib\providers\lead_provider.dart:20:7 - undefined_identifier
+   info - Don't invoke 'print' in production code - lib\providers\lead_provider.dart:29:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\providers\lead_provider.dart:38:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\providers\lead_provider.dart:47:7 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\dashboard_screen.dart:15:78 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\dashboard_screen.dart:65:61 - deprecated_member_use
+  error - The argument type 'BorderSide' can't be assigned to the parameter type 'BoxBorder?'.  - lib\screens\dashboard_screen.dart:154:17 - argument_type_not_assignable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\dashboard_screen.dart:154:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\dashboard_screen.dart:157:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\lead_details_screen.dart:21:78 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\lead_details_screen.dart:34:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\lead_details_screen.dart:54:76 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\lead_details_screen.dart:97:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\lead_details_screen.dart:131:53 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\screens\lead_generator_screen.dart:54:28 - use_build_context_synchronously
+  error - The argument type 'BorderSide' can't be assigned to the parameter type 'BoxBorder?'.  - lib\screens\lead_generator_screen.dart:140:29 - argument_type_not_assignable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\leads_list_screen.dart:24:78 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\leads_list_screen.dart:107:55 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\leads_list_screen.dart:135:73 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\pipeline_screen.dart:22:78 - deprecated_member_use
+  error - The argument type 'BorderSide' can't be assigned to the parameter type 'BoxBorder?'.  - lib\screens\pipeline_screen.dart:53:17 - argument_type_not_assignable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\pipeline_screen.dart:53:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\pipeline_screen.dart:70:72 - deprecated_member_use
+  error - The argument type 'BorderSide' can't be assigned to the parameter type 'BoxBorder?'.  - lib\screens\pipeline_screen.dart:72:27 - argument_type_not_assignable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\pipeline_screen.dart:72:57 - deprecated_member_use
+  error - The named parameter 'bottom' isn't defined - lib\screens\pipeline_screen.dart:72:75 - undefined_named_parameter
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\pipeline_screen.dart:72:113 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\pipeline_screen.dart:85:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\pipeline_screen.dart:133:45 - deprecated_member_use
+   info - The imported package 'path' isn't a dependency of the importing package - lib\services\database_service.dart:2:8 - depend_on_referenced_packages
+  error - The name 'ListToCsvConverter' isn't a class - lib\services\export_service.dart:53:26 - creation_with_non_type
+   info - Don't invoke 'print' in production code - lib\services\export_service.dart:58:7 - avoid_print
+  error - Target of URI doesn't exist: 'package:uuid/uuid.uuid.dart' - lib\services\lead_generator_service.dart:2:8 - uri_does_not_exist
+  error - The name 'Uuid' isn't a class - lib\services\lead_generator_service.dart:7:23 - creation_with_non_type
+

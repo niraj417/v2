@@ -8,12 +8,41 @@ import '../providers/history_provider.dart';
 import '../providers/scraper_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  bool _autoSync = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _autoSync = prefs.getBool('auto_sync_drive') ?? false;
+    });
+  }
+
+  Future<void> _toggleAutoSync(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('auto_sync_drive', value);
+    setState(() {
+      _autoSync = value;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -21,146 +50,174 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          const Text('Data Management', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
-          const SizedBox(height: 16),
+          _buildSectionHeader('Data Management'),
           ListTile(
             title: const Text('Export Leads to CSV'),
             subtitle: const Text('Save all your leads into your documents folder.'),
-            leading: const Icon(Icons.file_download),
+            leading: const Icon(Icons.file_download, color: Colors.blue),
             onTap: () async {
-              final leadsState = ref.read(leadListProvider);
-              leadsState.whenData((leads) async {
-                final exporter = ExportService();
-                final path = await exporter.exportToCsv(leads);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(path != null ? 'Exported to: $path' : 'Failed to export leads')),
-                  );
-                }
-              });
+              final sm = ScaffoldMessenger.of(context);
+              final leads = ref.read(leadListProvider).value;
+              if (leads != null) {
+                final path = await ExportService().exportToCsv(leads);
+                sm.showSnackBar(
+                  SnackBar(content: Text(path != null ? 'Exported to: $path' : 'Failed to export leads')),
+                );
+              }
             },
           ),
           const Divider(),
           ListTile(
             title: const Text('Backup to Google Drive'),
-            subtitle: const Text('Save a backup of your local database to your Google Drive securely.'),
-            leading: const Icon(Icons.cloud_upload),
+            subtitle: const Text('Manually sync your database to Google Drive.'),
+            leading: const Icon(Icons.cloud_upload, color: Colors.blue),
             onTap: () async {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Starting backup... Please wait.')),
               );
-              final backupService = DriveBackupService();
-              await backupService.backupDatabaseToDrive(context);
+              await DriveBackupService().backupDatabaseToDrive(context);
             },
+          ),
+          ListTile(
+            title: const Text('Restore from Google Drive'),
+            subtitle: const Text('Overwrite local data with Google Drive backup.'),
+            leading: const Icon(Icons.cloud_download, color: Colors.green),
+            onTap: () => _confirmRestore(context),
+          ),
+          SwitchListTile(
+            title: const Text('Auto-Sync to Drive'),
+            subtitle: const Text('Automatically backup on every update.'),
+            secondary: const Icon(Icons.sync, color: Colors.orange),
+            value: _autoSync,
+            onChanged: _toggleAutoSync,
           ),
           const Divider(),
           ListTile(
             title: const Text('Clear All Leads & History', style: TextStyle(color: Colors.red)),
             subtitle: const Text('This action cannot be undone.'),
             leading: const Icon(Icons.delete_forever, color: Colors.red),
-            onTap: () {
-              showDialog(
-                context: context, 
-                builder: (context) => AlertDialog(
-                  title: const Text('Clear Database?'),
-                  content: const Text('Are you sure you want to delete all leads and search history?'),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-                    TextButton(
-                      onPressed: () async {
-                        await DatabaseService.instance.clearAll();
-                        ref.read(leadListProvider.notifier).loadLeads();
-                        ref.read(historyProvider.notifier).loadHistory();
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Database cleared successfully')),
-                          );
-                        }
-                      }, 
-                      child: const Text('Delete', style: TextStyle(color: Colors.red)),
-                    ),
-                  ],
-                ),
-              );
-            },
+            onTap: () => _confirmClear(context),
           ),
           const SizedBox(height: 32),
-          const Text('Integrations & API', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
-          const SizedBox(height: 16),
+          _buildSectionHeader('Integrations & API'),
           ListTile(
             title: const Text('Apify API Token'),
             subtitle: Text(ref.watch(apifyTokenProvider).isEmpty 
-                ? 'No token configured. Using local WebView scraper.' 
-                : 'Token configured. Using high-performance Apify Cloud Scraper.'),
-            leading: const Icon(Icons.cloud_sync),
+                ? 'No token configured.' 
+                : 'Token configured.'),
+            leading: const Icon(Icons.vpn_key, color: Colors.purple),
             trailing: const Icon(Icons.edit),
-            onTap: () {
-              final controller = TextEditingController(text: ref.read(apifyTokenProvider));
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Apify API Token'),
-                  content: TextField(
-                    controller: controller,
-                    decoration: const InputDecoration(
-                      labelText: 'Token',
-                      hintText: 'apify_api_...',
-                    ),
-                  ),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-                    TextButton(
-                      onPressed: () {
-                        ref.read(apifyTokenProvider.notifier).updateToken(controller.text.trim());
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Apify token updated')),
-                        );
-                      },
-                      child: const Text('Save'),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          const Divider(),
-          ListTile(
-            title: const Text('Google Places API Key'),
-            subtitle: const Text('Reserved for future enrichment features.'),
-            leading: const Icon(Icons.vpn_key),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('API configuration coming in a future update')),
-              );
-            },
+            onTap: () => _showTokenDialog(context),
           ),
           const Divider(),
           const SizedBox(height: 32),
-          const Text('Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
-          const SizedBox(height: 16),
+          _buildSectionHeader('Account'),
           ListTile(
             title: const Text('Team Management'),
             subtitle: const Text('Invite members and view team activity.'),
-            leading: const Icon(Icons.groups),
-            onTap: () {
-              context.push('/team_management');
-            },
+            leading: const Icon(Icons.groups, color: Colors.teal),
+            onTap: () => context.push('/team_management'),
           ),
           const Divider(),
           ListTile(
             title: const Text('Logout', style: TextStyle(color: Colors.red)),
             leading: const Icon(Icons.logout, color: Colors.red),
             onTap: () async {
+              final router = GoRouter.of(context);
               await FirebaseAuth.instance.signOut();
-              if (context.mounted) {
-                context.go('/login');
-              }
+              router.go('/login');
             },
           ),
         ],
+      ),
+    );
+  }
+
+  void _confirmRestore(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restore Backup?'),
+        content: const Text('This will overwrite all local leads with data from Google Drive. Current local data will be lost.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              DriveBackupService().restoreDatabaseFromDrive(context);
+            },
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmClear(BuildContext context) {
+    showDialog(
+      context: context, 
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Database?'),
+        content: const Text('Are you sure you want to delete all leads and search history?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              final nav = Navigator.of(context);
+              final sm = ScaffoldMessenger.of(context);
+              
+              await DatabaseService.instance.clearAll();
+              ref.read(leadListProvider.notifier).loadLeads();
+              ref.read(historyProvider.notifier).loadHistory();
+              
+              if (mounted) {
+                nav.pop();
+                sm.showSnackBar(
+                  const SnackBar(content: Text('Database cleared successfully')),
+                );
+              }
+            }, 
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTokenDialog(BuildContext context) {
+    final controller = TextEditingController(text: ref.read(apifyTokenProvider));
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Apify API Token'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Token', hintText: 'apify_api_...'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              ref.read(apifyTokenProvider.notifier).updateToken(controller.text.trim());
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0, top: 16.0),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).colorScheme.primary,
+        ),
       ),
     );
   }
