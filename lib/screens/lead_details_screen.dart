@@ -207,7 +207,13 @@ class LeadDetailsScreen extends ConsumerWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: TextStyle(color: Colors.grey.shade600)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Expanded(
+          child: Text(
+            value, 
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.right,
+          ),
+        ),
       ],
     );
   }

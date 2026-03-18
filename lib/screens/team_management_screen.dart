@@ -50,41 +50,43 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
   Widget _buildNoTeamView() {
     final controller = TextEditingController();
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.group_add, size: 80, color: Colors.blueGrey),
-            const SizedBox(height: 16),
-            const Text(
-              'You are not part of any team yet.',
-              style: TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'Team Name',
-                border: OutlineInputBorder(),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.group_add, size: 80, color: Colors.blueGrey),
+              const SizedBox(height: 16),
+              const Text(
+                'You are not part of any team yet.',
+                style: TextStyle(fontSize: 18),
               ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () async {
-                if (controller.text.isNotEmpty) {
-                  await _teamService.createTeam(controller.text.trim());
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Team created!')),
-                    );
+              const SizedBox(height: 24),
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'Team Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  if (controller.text.isNotEmpty) {
+                    await _teamService.createTeam(controller.text.trim());
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Team created!')),
+                      );
+                    }
                   }
-                }
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Create New Team'),
-            ),
-          ],
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Create New Team'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -99,10 +101,14 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-               Text(
-                 'Team: $_teamName', 
-                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)
+               Expanded(
+                 child: Text(
+                   'Team: $_teamName', 
+                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                   overflow: TextOverflow.ellipsis,
+                 ),
                ),
+               const SizedBox(width: 8),
                ElevatedButton.icon(
                  onPressed: _showAddMemberDialog,
                  icon: const Icon(Icons.person_add),

@@ -46,12 +46,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+        child: Center(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
               Text(
                 'Welcome Back',
                 style: GoogleFonts.inter(
@@ -127,11 +129,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   style: GoogleFonts.inter(fontSize: 16),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    );
+     ),
+   );
   }
 
   @override

@@ -54,11 +54,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+        child: Center(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
               Text(
                 'Create Account',
                 style: GoogleFonts.inter(
@@ -124,11 +126,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         ),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    );
+     ),
+   );
   }
 
   @override
