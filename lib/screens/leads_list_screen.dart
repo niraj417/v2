@@ -180,14 +180,20 @@ class _LeadsListScreenState extends ConsumerState<LeadsListScreen> {
                                 onPressed: lead.phone.isEmpty 
                                     ? null 
                                     : () async {
-                                        final Uri url = Uri.parse('tel:${lead.phone}');
-                                        if (await canLaunchUrl(url)) {
+                                        try {
+                                          final Uri url = Uri.parse('tel:${lead.phone}');
                                           await launchUrl(url);
                                           final teamService = TeamService();
                                           final teamsSnapshot = await teamService.getUserTeams().first;
                                           if (teamsSnapshot.docs.isNotEmpty) {
                                             final teamId = teamsSnapshot.docs.first.id;
                                             await teamService.logCall(teamId, lead.phone, lead.businessName);
+                                          }
+                                        } catch (e) {
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Could not launch dialer')),
+                                            );
                                           }
                                         }
                                       },
@@ -201,11 +207,17 @@ class _LeadsListScreenState extends ConsumerState<LeadsListScreen> {
                                 onPressed: lead.website.isEmpty 
                                     ? null 
                                     : () async {
-                                        final Uri url = Uri.parse(
-                                          lead.website.startsWith('http') ? lead.website : 'https://${lead.website}'
-                                        );
-                                        if (await canLaunchUrl(url)) {
+                                        try {
+                                          final Uri url = Uri.parse(
+                                            lead.website.startsWith('http') ? lead.website : 'https://${lead.website}'
+                                          );
                                           await launchUrl(url);
+                                        } catch (e) {
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Could not open website')),
+                                            );
+                                          }
                                         }
                                       },
                                 icon: const Icon(Icons.language, size: 18),

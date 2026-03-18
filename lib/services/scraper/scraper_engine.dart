@@ -121,16 +121,16 @@ class ScraperEngine {
         scrollAttempts++;
       }
 
+      if (imported > 0) {
+        await DatabaseService.instance.insertSearchHistory(keyword, location, imported);
+      }
+
       onProgress?.call(ScraperStatus(
         foundCount: found,
         importedCount: imported,
         currentAction: _isCancelled ? 'Scraping stopped by user.' : 'Scraping session finished successfully.',
         isComplete: true,
       ));
-
-      if (imported > 0) {
-        await DatabaseService.instance.insertSearchHistory(keyword, location, imported);
-      }
       
     } catch (e) {
       onProgress?.call(ScraperStatus(
@@ -177,16 +177,16 @@ class ScraperEngine {
         }
       }
 
+      if (imported > 0) {
+        await DatabaseService.instance.insertSearchHistory(keyword, location, imported);
+      }
+
       onProgress?.call(ScraperStatus(
         foundCount: leads.length,
         importedCount: imported,
         currentAction: 'Apify scraping finished successfully.',
         isComplete: true,
       ));
-
-      if (imported > 0) {
-        await DatabaseService.instance.insertSearchHistory(keyword, location, imported);
-      }
     } catch (e) {
       onProgress?.call(ScraperStatus(
         currentAction: 'Apify Error: $e',

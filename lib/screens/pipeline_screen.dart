@@ -1,5 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../models/lead_model.dart';
 import '../providers/lead_provider.dart';
@@ -19,26 +21,53 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
     final leadsState = ref.watch(leadListProvider);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        title: const Text('Pipeline Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text('Pipeline Dashboard', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: leadsState.when(
-        data: (leads) {
-          return ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.all(16),
-            itemCount: _stages.length,
-            itemBuilder: (context, index) {
-              final stage = _stages[index];
-              final stageLeads = leads.where((l) => l.leadStatus == stage).toList();
-              
-              return _buildKanbanColumn(stage, stageLeads);
-            },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error: $e')),
+      extendBodyBehindAppBar: true,
+      body: Stack(
+        children: [
+          // Ambient Background Glows
+          Positioned(
+            top: -50,
+            left: -50,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF3B82F6),
+              ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 120, sigmaY: 120),
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: leadsState.when(
+              data: (leads) {
+                return ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: _stages.length,
+                  itemBuilder: (context, index) {
+                    final stage = _stages[index];
+                    final stageLeads = leads.where((l) => l.leadStatus == stage).toList();
+                    
+                    return _buildKanbanColumn(stage, stageLeads);
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator(color: Colors.white)),
+              error: (e, st) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.white))),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -48,9 +77,9 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
       width: 280,
       margin: const EdgeInsets.only(right: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: DragTarget<Lead>(
         onAcceptWithDetails: (details) {
@@ -67,13 +96,10 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: candidateData.isNotEmpty 
-                      ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5) 
+                      ? Colors.white.withValues(alpha: 0.1) 
                       : Colors.transparent,
                   border: Border(
-                    bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
-                    top: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
-                    left: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
-                    right: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
+                    bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
                   ),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 ),
@@ -82,17 +108,18 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
                   children: [
                     Text(
                       stage,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                      style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withValues(alpha: 0.1),
+                        color: _getStageColor(stage).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _getStageColor(stage).withValues(alpha: 0.5)),
                       ),
                       child: Text(
                         '${leads.length}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _getStageColor(stage)),
                       ),
                     ),
                   ],
@@ -107,8 +134,7 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
                     return Draggable<Lead>(
                       data: lead,
                       feedback: Material(
-                        elevation: 8,
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.transparent,
                         child: SizedBox(
                           width: 260,
                           child: _buildLeadCard(lead, isDragging: true),
@@ -131,12 +157,19 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
   }
 
   Widget _buildLeadCard(Lead lead, {bool isDragging = false}) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: isDragging ? 8 : 1,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B), // Slightly lighter state for visibility
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDragging ? _getStageColor(lead.leadStatus) : Colors.white.withValues(alpha: 0.1)),
+        boxShadow: isDragging ? [
+          BoxShadow(
+            color: _getStageColor(lead.leadStatus).withValues(alpha: 0.3),
+            blurRadius: 12,
+            spreadRadius: 2,
+          )
+        ] : [],
       ),
       child: InkWell(
         onTap: () {
@@ -152,24 +185,24 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondaryContainer,
+                  color: _getStageColor(lead.leadStatus).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   'Status: ${lead.leadStatus}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    color: Theme.of(context).colorScheme.onSecondaryContainer,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: _getStageColor(lead.leadStatus),
                   ),
                 ),
               ),
               Text(
                 lead.businessName,
-                style: const TextStyle(
+                style: GoogleFonts.inter(
                   fontWeight: FontWeight.bold, 
-                  fontSize: 14,
-                  color: Colors.black, // Explicitly black as requested
+                  fontSize: 15,
+                  color: Colors.white,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -177,16 +210,16 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(Icons.phone, size: 12, color: Colors.grey.shade600),
+                  const Icon(Icons.phone, size: 12, color: Colors.white54),
                   const SizedBox(width: 4),
-                  Text(lead.phone, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                  Text(lead.phone, style: GoogleFonts.inter(color: Colors.white70, fontSize: 12)),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
                 lead.keyword,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
+                style: GoogleFonts.inter(
+                  color: Colors.blueAccent,
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
                 ),
@@ -196,5 +229,16 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
         ),
       ),
     );
+  }
+
+  Color _getStageColor(String stage) {
+    switch (stage) {
+      case 'New': return Colors.blueAccent;
+      case 'Contacted': return Colors.orangeAccent;
+      case 'Interested': return Colors.purpleAccent;
+      case 'Closed': return Colors.greenAccent;
+      case 'Not Interested': return Colors.redAccent;
+      default: return Colors.white54;
+    }
   }
 }

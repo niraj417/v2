@@ -158,8 +158,8 @@ class LeadDetailsScreen extends ConsumerWidget {
             onPressed: currentLead.phone.isEmpty
                 ? null
                 : () async {
-                    final Uri url = Uri.parse('tel:${currentLead.phone}');
-                    if (await canLaunchUrl(url)) {
+                    try {
+                      final Uri url = Uri.parse('tel:${currentLead.phone}');
                       await launchUrl(url);
                       // Log the call if user is in a team
                       final teamService = TeamService();
@@ -167,6 +167,12 @@ class LeadDetailsScreen extends ConsumerWidget {
                       if (teamsSnapshot.docs.isNotEmpty) {
                         final teamId = teamsSnapshot.docs.first.id;
                         await teamService.logCall(teamId, currentLead.phone, currentLead.businessName);
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Could not launch dialer')),
+                        );
                       }
                     }
                   },
