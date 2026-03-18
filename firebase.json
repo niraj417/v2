@@ -1,0 +1,28 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "crm-leads-app-99120",
+          "appId": "1:384227067713:android:24b94bb7c78fa625dcc3c0",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "crm-leads-app-99120",
+          "configurations": {
+            "android": "1:384227067713:android:24b94bb7c78fa625dcc3c0",
+            "ios": "1:384227067713:ios:913abd206c2badd7dcc3c0",
+            "web": "1:384227067713:web:9292dece04bf011ddcc3c0"
+          }
+        }
+      }
+    }
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true
+    }
+  }
+}

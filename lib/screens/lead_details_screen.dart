@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/lead_model.dart';
 import '../providers/lead_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/team_service.dart';
 
 class LeadDetailsScreen extends ConsumerWidget {
   final Lead lead;
@@ -153,7 +155,21 @@ class LeadDetailsScreen extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: FilledButton.icon(
-            onPressed: () {},
+            onPressed: currentLead.phone.isEmpty
+                ? null
+                : () async {
+                    final Uri url = Uri.parse('tel:${currentLead.phone}');
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url);
+                      // Log the call if user is in a team
+                      final teamService = TeamService();
+                      final teamsSnapshot = await teamService.getUserTeams().first;
+                      if (teamsSnapshot.docs.isNotEmpty) {
+                        final teamId = teamsSnapshot.docs.first.id;
+                        await teamService.logCall(teamId, currentLead.phone, currentLead.businessName);
+                      }
+                    }
+                  },
             icon: const Icon(Icons.phone),
             label: const Text('Call Lead'),
             style: FilledButton.styleFrom(

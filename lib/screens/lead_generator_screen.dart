@@ -193,28 +193,44 @@ class _LeadGeneratorScreenState extends ConsumerState<LeadGeneratorScreen> {
             icon: Icons.location_on_rounded,
           ),
           const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: FilledButton(
-              onPressed: _isLoading ? null : _generateLeads,
-              style: FilledButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                elevation: 0,
+          if (_isLoading)
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: FilledButton.icon(
+                onPressed: () { 
+                  ref.read(scraperEngineProvider).stop(); 
+                  setState(() { _isLoading = false; }); 
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.error,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.stop_circle_rounded, color: Colors.white),
+                label: Text(
+                  'Stop Generation',
+                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
               ),
-              child: _isLoading 
-                ? const SizedBox(
-                    width: 24, 
-                    height: 24, 
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                  )
-                : Text(
-                    'Search & Extract',
-                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: FilledButton(
+                onPressed: _generateLeads,
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'Search & Extract',
+                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
             ),
-          ),
         ],
       ),
     );

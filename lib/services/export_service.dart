@@ -1,5 +1,5 @@
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'dart:typed_data';
+import 'package:file_saver/file_saver.dart';
 import '../models/lead_model.dart';
 
 class ExportService {
@@ -7,11 +7,7 @@ class ExportService {
     try {
       if (leads.isEmpty) return null;
 
-      final directory = await _getExportDirectory();
-      if (directory == null) return null;
-
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final File file = File('${directory.path}/leads_export_$timestamp.csv');
+      if (leads.isEmpty) return null;
 
       List<List<dynamic>> rows = [];
       
@@ -50,21 +46,21 @@ class ExportService {
       }
 
       String csv = rows.map((row) => row.map((e) => '"${e.toString().replaceAll('"', '""')}"').join(',')).join('\n');
-      await file.writeAsString(csv);
+      Uint8List bytes = Uint8List.fromList(csv.codeUnits);
       
-      return file.path;
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      
+      String fileName = await FileSaver.instance.saveFile(
+        name: 'leads_export_$timestamp',
+        bytes: bytes,
+        fileExtension: 'csv',
+        mimeType: MimeType.csv,
+      );
+      
+      return fileName;
     } catch (_) {
       // Export failed silently — caller checks for null return value.
       return null;
-    }
-  }
-
-  Future<Directory?> _getExportDirectory() async {
-    if (Platform.isAndroid) {
-      // Use external storage for downloads/documents on Android
-      return await getExternalStorageDirectory();
-    } else {
-      return await getApplicationDocumentsDirectory();
     }
   }
 }

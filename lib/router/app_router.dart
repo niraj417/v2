@@ -9,13 +9,41 @@ import '../screens/pipeline_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/main_layout.dart';
 import '../screens/lead_details_screen.dart';
+import '../screens/login_screen.dart';
+import '../screens/signup_screen.dart';
+import '../screens/team_management_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: '/dashboard',
+  initialLocation: '/',
+  redirect: (context, state) {
+    final user = FirebaseAuth.instance.currentUser;
+    final isLoggedIn = user != null;
+    final isGoingToLoginOrSignup = state.matchedLocation == '/login' || state.matchedLocation == '/signup';
+
+    if (!isLoggedIn && !isGoingToLoginOrSignup) {
+      return '/login';
+    }
+    if (isLoggedIn && isGoingToLoginOrSignup) {
+      return '/dashboard';
+    }
+    if (isLoggedIn && state.matchedLocation == '/') {
+      return '/dashboard';
+    }
+    return null;
+  },
   routes: [
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/signup',
+      builder: (context, state) => const SignupScreen(),
+    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         return MainLayout(navigationShell: navigationShell);
@@ -75,6 +103,11 @@ final appRouter = GoRouter(
       path: '/lead_details',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => LeadDetailsScreen(lead: state.extra as Lead),
+    ),
+    GoRoute(
+      path: '/team_management',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const TeamManagementScreen(),
     ),
   ],
 );

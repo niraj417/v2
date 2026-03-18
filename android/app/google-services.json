@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "384227067713",
+    "project_id": "crm-leads-app-99120",
+    "storage_bucket": "crm-leads-app-99120.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:384227067713:android:24b94bb7c78fa625dcc3c0",
+        "android_client_info": {
+          "package_name": "com.digitization.crm_leads_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtFGb79aCHX65ZM2fBVd7KRkDeq66HyF0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/scraper/webview_controller.dart';
 import '../services/scraper/scraper_engine.dart';
 import '../services/scraper/apify_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
 // Apify token — editable by the user from Settings screen.
@@ -9,11 +10,26 @@ import '../services/scraper/apify_service.dart';
 // ---------------------------------------------------------------------------
 
 class _ApifyTokenNotifier extends Notifier<String> {
-  @override
-  String build() => '';
+  static const _tokenKey = 'apify_token_prefs';
 
-  void updateToken(String newToken) {
+  @override
+  String build() {
+    _loadToken();
+    return '';
+  }
+
+  Future<void> _loadToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedToken = prefs.getString(_tokenKey);
+    if (savedToken != null && savedToken.isNotEmpty) {
+      state = savedToken;
+    }
+  }
+
+  Future<void> updateToken(String newToken) async {
     state = newToken;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, newToken);
   }
 }
 

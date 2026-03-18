@@ -25,6 +25,11 @@ class DatabaseService {
     );
   }
 
+  Future<String> getDatabasePath() async {
+    final dbPath = await getDatabasesPath();
+    return join(dbPath, 'leads_crm.db');
+  }
+
   Future _createDB(Database db, int version) async {
     await db.execute('''
       CREATE TABLE leads (

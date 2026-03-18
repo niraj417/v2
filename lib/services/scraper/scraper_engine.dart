@@ -29,7 +29,13 @@ class ScraperEngine {
   final DuplicateFilter _duplicateFilter = DuplicateFilter();
   final _random = Random();
 
+  bool _isCancelled = false;
+
   ScraperEngine(this.webviewController, {this.apifyService});
+
+  void stop() {
+    _isCancelled = true;
+  }
 
   /// Main scraping loop that handles navigation, scrolling, and extraction.
   Future<void> scrape(
@@ -37,6 +43,7 @@ class ScraperEngine {
     String location, 
     {int targetCount = 100, void Function(ScraperStatus)? onProgress}
   ) async {
+    _isCancelled = false;
     _duplicateFilter.clear();
     int imported = 0;
     int found = 0;
@@ -60,6 +67,8 @@ class ScraperEngine {
       int scrollAttempts = 0;
 
       while (imported < targetCount && !endReached && scrollAttempts < 150) {
+        if (_isCancelled) throw Exception('Cancelled by user');
+
         onProgress?.call(ScraperStatus(
           foundCount: found,
           importedCount: imported,
@@ -70,6 +79,7 @@ class ScraperEngine {
         found = listings.length;
 
         for (var data in listings) {
+          if (_isCancelled) throw Exception('Cancelled by user');
           final lead = LeadFormatter.format(data, keyword, location);
           
           if (_duplicateFilter.isNew(lead.id)) {
@@ -114,7 +124,7 @@ class ScraperEngine {
       onProgress?.call(ScraperStatus(
         foundCount: found,
         importedCount: imported,
-        currentAction: 'Scraping session finished successfully.',
+        currentAction: _isCancelled ? 'Scraping stopped by user.' : 'Scraping session finished successfully.',
         isComplete: true,
       ));
 
@@ -126,9 +136,9 @@ class ScraperEngine {
       onProgress?.call(ScraperStatus(
         foundCount: found,
         importedCount: imported,
-        currentAction: 'Error during scraping: $e',
+        currentAction: 'Scraping stopped: $e',
         isComplete: true,
-        isError: true,
+        isError: e.toString().contains('Cancelled') ? false : true,
       ));
     }
   }
@@ -144,7 +154,7 @@ class ScraperEngine {
       final runId = await apifyService!.startScrape(keyword, location, maxResults: targetCount);
       
       onProgress?.call(ScraperStatus(currentAction: 'Actor running. Waiting for results...'));
-      final runData = await apifyService!.waitForCompletion(runId);
+      final runData = await apifyService!.waitForCompletion(runId, isCancelled: () => _isCancelled);
       
       onProgress?.call(ScraperStatus(currentAction: 'Processing results...'));
       final datasetId = runData['defaultDatasetId'];

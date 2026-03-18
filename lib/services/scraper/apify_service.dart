@@ -87,7 +87,7 @@ class ApifyService {
 
   /// Polls the actor run status every 5 seconds until it completes.
   /// Returns the full run data map (which contains [defaultDatasetId]).
-  Future<Map<String, dynamic>> waitForCompletion(String runId) async {
+  Future<Map<String, dynamic>> waitForCompletion(String runId, {bool Function()? isCancelled}) async {
     final url = Uri.parse(
       'https://api.apify.com/v2/actor-runs/$runId?token=$apiToken',
     );
@@ -95,7 +95,15 @@ class ApifyService {
     const terminalStatuses = {'SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'};
 
     while (true) {
+      if (isCancelled != null && isCancelled()) {
+        throw Exception('Cancelled by user');
+      }
+
       await Future.delayed(const Duration(seconds: 5));
+
+      if (isCancelled != null && isCancelled()) {
+        throw Exception('Cancelled by user');
+      }
 
       final response = await http.get(url);
       if (response.statusCode != 200) {

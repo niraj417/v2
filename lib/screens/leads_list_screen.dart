@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/lead_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/team_service.dart';
 
 class LeadsListScreen extends ConsumerStatefulWidget {
   const LeadsListScreen({super.key});
@@ -175,7 +177,20 @@ class _LeadsListScreenState extends ConsumerState<LeadsListScreen> {
                           children: [
                             Expanded(
                               child: TextButton.icon(
-                                onPressed: () {},
+                                onPressed: lead.phone.isEmpty 
+                                    ? null 
+                                    : () async {
+                                        final Uri url = Uri.parse('tel:${lead.phone}');
+                                        if (await canLaunchUrl(url)) {
+                                          await launchUrl(url);
+                                          final teamService = TeamService();
+                                          final teamsSnapshot = await teamService.getUserTeams().first;
+                                          if (teamsSnapshot.docs.isNotEmpty) {
+                                            final teamId = teamsSnapshot.docs.first.id;
+                                            await teamService.logCall(teamId, lead.phone, lead.businessName);
+                                          }
+                                        }
+                                      },
                                 icon: const Icon(Icons.phone, size: 18),
                                 label: const Text('Call'),
                               ),
@@ -183,7 +198,16 @@ class _LeadsListScreenState extends ConsumerState<LeadsListScreen> {
                             Container(width: 1, height: 24, color: Colors.grey.shade300),
                             Expanded(
                               child: TextButton.icon(
-                                onPressed: () {},
+                                onPressed: lead.website.isEmpty 
+                                    ? null 
+                                    : () async {
+                                        final Uri url = Uri.parse(
+                                          lead.website.startsWith('http') ? lead.website : 'https://${lead.website}'
+                                        );
+                                        if (await canLaunchUrl(url)) {
+                                          await launchUrl(url);
+                                        }
+                                      },
                                 icon: const Icon(Icons.language, size: 18),
                                 label: const Text('Website'),
                               ),

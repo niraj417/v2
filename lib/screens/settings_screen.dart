@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/export_service.dart';
 import '../services/database_service.dart';
+import '../services/drive_backup_service.dart';
 import '../providers/lead_provider.dart';
 import '../providers/history_provider.dart';
 import '../providers/scraper_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -35,6 +38,19 @@ class SettingsScreen extends ConsumerWidget {
                   );
                 }
               });
+            },
+          ),
+          const Divider(),
+          ListTile(
+            title: const Text('Backup to Google Drive'),
+            subtitle: const Text('Save a backup of your local database to your Google Drive securely.'),
+            leading: const Icon(Icons.cloud_upload),
+            onTap: () async {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Starting backup... Please wait.')),
+              );
+              final backupService = DriveBackupService();
+              await backupService.backupDatabaseToDrive(context);
             },
           ),
           const Divider(),
@@ -119,6 +135,29 @@ class SettingsScreen extends ConsumerWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('API configuration coming in a future update')),
               );
+            },
+          ),
+          const Divider(),
+          const SizedBox(height: 32),
+          const Text('Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
+          const SizedBox(height: 16),
+          ListTile(
+            title: const Text('Team Management'),
+            subtitle: const Text('Invite members and view team activity.'),
+            leading: const Icon(Icons.groups),
+            onTap: () {
+              context.push('/team_management');
+            },
+          ),
+          const Divider(),
+          ListTile(
+            title: const Text('Logout', style: TextStyle(color: Colors.red)),
+            leading: const Icon(Icons.logout, color: Colors.red),
+            onTap: () async {
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) {
+                context.go('/login');
+              }
             },
           ),
         ],
