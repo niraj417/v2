@@ -21,7 +21,7 @@ class _LeadsListScreenState extends ConsumerState<LeadsListScreen> {
     final leadsState = ref.watch(leadListProvider);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
       appBar: AppBar(
         title: const Text('My Leads', style: TextStyle(fontWeight: FontWeight.bold)),
         bottom: PreferredSize(
@@ -104,7 +104,7 @@ class _LeadsListScreenState extends ConsumerState<LeadsListScreen> {
                 elevation: 0,
                 margin: const EdgeInsets.only(bottom: 16),
                 shape: RoundedRectangleBorder(
-                  side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                  side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: InkWell(
@@ -132,7 +132,7 @@ class _LeadsListScreenState extends ConsumerState<LeadsListScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: _getStatusColor(lead.leadStatus).withOpacity(0.1),
+                                color: _getStatusColor(lead.leadStatus).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(

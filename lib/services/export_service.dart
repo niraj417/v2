@@ -53,8 +53,8 @@ class ExportService {
       await file.writeAsString(csv);
       
       return file.path;
-    } catch (e) {
-      print("Export error: $e");
+    } catch (_) {
+      // Export failed silently — caller checks for null return value.
       return null;
     }
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,6 +6,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'router/app_router.dart';
 
 void main() {
+  // In release mode, capture any uncaught Flutter framework errors silently
+  // rather than showing the red error screen to end users.
+  if (!kDebugMode) {
+    FlutterError.onError = (details) {
+      // Errors are suppressed in production — integrate a crash reporting
+      // tool here (e.g. Firebase Crashlytics) if needed.
+    };
+  }
+
   runApp(
     const ProviderScope(
       child: MyApp(),
@@ -19,9 +29,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'CRM Leads',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2563EB), // A nice blue
+          seedColor: const Color(0xFF2563EB),
           brightness: Brightness.light,
         ),
         useMaterial3: true,

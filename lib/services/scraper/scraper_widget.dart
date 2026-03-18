@@ -29,10 +29,6 @@ class ScraperWidget extends ConsumerWidget {
             onWebViewCreated: (webViewController) {
               controller.onWebViewCreated(webViewController);
             },
-            onConsoleMessage: (controller, consoleMessage) {
-              // Useful for debugging in-app scraping logic
-              debugPrint("SCRAPER_CONSOLE: ${consoleMessage.message}");
-            },
           ),
         ),
       ),

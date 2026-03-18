@@ -12,7 +12,7 @@ class DashboardScreen extends ConsumerWidget {
     final historyState = ref.watch(historyProvider);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
       appBar: AppBar(
         title: const Text('My Leads', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
@@ -62,7 +62,7 @@ class DashboardScreen extends ConsumerWidget {
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                        side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: ListTile(
@@ -151,10 +151,10 @@ class DashboardScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

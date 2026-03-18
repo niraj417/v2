@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../providers/lead_provider.dart';
 import '../providers/history_provider.dart';
 import '../providers/scraper_provider.dart';
@@ -31,7 +32,10 @@ class _LeadGeneratorScreenState extends ConsumerState<LeadGeneratorScreen> {
 
     if (keyword.isEmpty || location.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter both keyword and location')),
+        const SnackBar(
+          content: Text('Please enter both keyword and location'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -49,7 +53,7 @@ class _LeadGeneratorScreenState extends ConsumerState<LeadGeneratorScreen> {
         location, 
         targetCount: 50, 
         onProgress: (status) {
-          ref.read(scraperStatusProvider.notifier).state = status;
+          ref.read(scraperStatusProvider.notifier).updateStatus(status);
           
           if (status.isComplete) {
             setState(() {
@@ -59,12 +63,23 @@ class _LeadGeneratorScreenState extends ConsumerState<LeadGeneratorScreen> {
             // Refresh providers
             ref.read(leadListProvider.notifier).loadLeads();
             ref.read(historyProvider.notifier).loadHistory();
+            
+            if (status.isError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Scraping error: ${status.currentAction}'),
+                  backgroundColor: Colors.redAccent,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
           }
         },
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error generating leads: $e')),
+        SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating),
       );
       setState(() {
         _isLoading = false;
@@ -75,145 +90,265 @@ class _LeadGeneratorScreenState extends ConsumerState<LeadGeneratorScreen> {
   @override
   Widget build(BuildContext context) {
     final scraperStatus = ref.watch(scraperStatusProvider);
+    final theme = Theme.of(context);
     
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Discover Leads', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Lead Pulse', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Find Local Businesses',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Enter a target keyword and location to automatically discover and extract business data into your CRM.',
-                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-              ),
-              const SizedBox(height: 32),
-              
-              const Text('Target Keyword', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _keywordController,
-                decoration: InputDecoration(
-                  hintText: 'e.g. Dentist, Plumber, Marketing Agency',
-                  prefixIcon: const Icon(Icons.business),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.surface,
-                ),
-              ),
-              const SizedBox(height: 24),
-              
-              const Text('Target Location', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _locationController,
-                decoration: InputDecoration(
-                  hintText: 'e.g. Kolkata, New York, London',
-                  prefixIcon: const Icon(Icons.location_on),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.surface,
-                ),
-              ),
-              const SizedBox(height: 48),
-
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: FilledButton.icon(
-                  onPressed: _isLoading ? null : _generateLeads,
-                  icon: _isLoading 
-                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
-                      : const Icon(Icons.auto_awesome),
-                  label: Text(
-                    _isLoading ? 'Extracting Data...' : 'Generate Leads',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-
-              if (_isLoading) ...[
-                const SizedBox(height: 32),
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.2)),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Text(
-                              scraperStatus.currentAction,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      LinearProgressIndicator(
-                        value: scraperStatus.importedCount > 0 ? (scraperStatus.importedCount / 50) : null,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Found: ${scraperStatus.foundCount}'),
-                          Text('Imported: ${scraperStatus.importedCount} / 50'),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-
-              if (_lastGeneratedCount != null) ...[
-                const SizedBox(height: 32),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.green.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.green.shade700),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Successfully discovered and stored $_lastGeneratedCount unique leads.',
-                          style: TextStyle(color: Colors.green.shade900, fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              theme.colorScheme.surface,
+              theme.colorScheme.primaryContainer.withValues(alpha: 0.05),
+              theme.colorScheme.surface,
             ],
           ),
         ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 120),
+                Hero(
+                  tag: 'generator_title',
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Text(
+                      'Universal Search',
+                      style: GoogleFonts.outfit(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Powered by Apify Cloud Engine',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
+                _buildInputCard(theme),
+                
+                const SizedBox(height: 32),
+
+                if (_isLoading) _buildProgressCard(theme, scraperStatus),
+
+                if (_lastGeneratedCount != null) _buildSuccessCard(theme),
+                
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputCard(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildTextField(
+            label: 'Business Category',
+            controller: _keywordController,
+            hint: 'e.g. Real Estate, Software...',
+            icon: Icons.search_rounded,
+          ),
+          const SizedBox(height: 20),
+          _buildTextField(
+            label: 'Region',
+            controller: _locationController,
+            hint: 'e.g. New York, London...',
+            icon: Icons.location_on_rounded,
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: FilledButton(
+              onPressed: _isLoading ? null : _generateLeads,
+              style: FilledButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
+              ),
+              child: _isLoading 
+                ? const SizedBox(
+                    width: 24, 
+                    height: 24, 
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  )
+                : Text(
+                    'Search & Extract',
+                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: Icon(icon, size: 20),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
+            filled: true,
+            fillColor: Colors.grey.shade100,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressCard(ThemeData theme, ScraperStatus status) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.cloud_sync_rounded, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AI Engine Working',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    Text(
+                      status.currentAction,
+                      style: GoogleFonts.inter(fontSize: 13, color: Colors.grey.shade700),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: status.importedCount > 0 ? (status.importedCount / 50) : null,
+              minHeight: 8,
+              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildStat('Discovered', status.foundCount.toString()),
+              _buildStat('Imported', '${status.importedCount}/50'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStat(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600)),
+        Text(value, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _buildSuccessCard(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.green.shade100),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle_rounded, color: Colors.green.shade700, size: 28),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              'Successfully harvested $_lastGeneratedCount verified leads in ${_locationController.text}.',
+              style: GoogleFonts.inter(
+                color: Colors.green.shade900,
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

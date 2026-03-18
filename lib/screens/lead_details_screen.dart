@@ -18,7 +18,7 @@ class LeadDetailsScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
       appBar: AppBar(
         title: const Text('Lead Details', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
@@ -31,7 +31,7 @@ class LeadDetailsScreen extends ConsumerWidget {
             Card(
               elevation: 0,
               shape: RoundedRectangleBorder(
-                side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Padding(
@@ -51,7 +51,7 @@ class LeadDetailsScreen extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: _getStatusColor(currentLead.leadStatus).withOpacity(0.1),
+                            color: _getStatusColor(currentLead.leadStatus).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -94,7 +94,7 @@ class LeadDetailsScreen extends ConsumerWidget {
             Card(
                elevation: 0,
               shape: RoundedRectangleBorder(
-                side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Padding(
@@ -128,7 +128,7 @@ class LeadDetailsScreen extends ConsumerWidget {
             Card(
                elevation: 0,
               shape: RoundedRectangleBorder(
-                side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Padding(

@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:math';
-import '../../models/lead_model.dart';
 import 'search_url_builder.dart';
 import 'webview_controller.dart';
 import 'lead_formatter.dart';
 import 'duplicate_filter.dart';
 import '../database_service.dart';
+import 'apify_service.dart';
 
 class ScraperStatus {
   final int foundCount;
@@ -25,10 +25,11 @@ class ScraperStatus {
 
 class ScraperEngine {
   final ScraperWebviewController webviewController;
+  final ApifyService? apifyService;
   final DuplicateFilter _duplicateFilter = DuplicateFilter();
   final _random = Random();
 
-  ScraperEngine(this.webviewController);
+  ScraperEngine(this.webviewController, {this.apifyService});
 
   /// Main scraping loop that handles navigation, scrolling, and extraction.
   Future<void> scrape(
@@ -39,6 +40,11 @@ class ScraperEngine {
     _duplicateFilter.clear();
     int imported = 0;
     int found = 0;
+
+    if (apifyService != null) {
+      await _scrapeWithApify(keyword, location, targetCount, onProgress);
+      return;
+    }
 
     try {
       onProgress?.call(ScraperStatus(currentAction: 'Building search URL...'));
@@ -121,6 +127,59 @@ class ScraperEngine {
         foundCount: found,
         importedCount: imported,
         currentAction: 'Error during scraping: $e',
+        isComplete: true,
+        isError: true,
+      ));
+    }
+  }
+
+  Future<void> _scrapeWithApify(
+    String keyword, 
+    String location, 
+    int targetCount, 
+    void Function(ScraperStatus)? onProgress
+  ) async {
+    try {
+      onProgress?.call(ScraperStatus(currentAction: 'Starting Apify Cloud Actor...'));
+      final runId = await apifyService!.startScrape(keyword, location, maxResults: targetCount);
+      
+      onProgress?.call(ScraperStatus(currentAction: 'Actor running. Waiting for results...'));
+      final runData = await apifyService!.waitForCompletion(runId);
+      
+      onProgress?.call(ScraperStatus(currentAction: 'Processing results...'));
+      final datasetId = runData['defaultDatasetId'];
+      final leads = await apifyService!.fetchResults(datasetId, keyword, location);
+      
+      int imported = 0;
+      for (var lead in leads) {
+        if (_duplicateFilter.isNew(lead.id)) {
+          try {
+            await DatabaseService.instance.insertLead(lead);
+            imported++;
+            onProgress?.call(ScraperStatus(
+              foundCount: leads.length,
+              importedCount: imported,
+              currentAction: 'Imported: ${lead.businessName}',
+            ));
+          } catch (e) {
+            // Skip failed inserts
+          }
+        }
+      }
+
+      onProgress?.call(ScraperStatus(
+        foundCount: leads.length,
+        importedCount: imported,
+        currentAction: 'Apify scraping finished successfully.',
+        isComplete: true,
+      ));
+
+      if (imported > 0) {
+        await DatabaseService.instance.insertSearchHistory(keyword, location, imported);
+      }
+    } catch (e) {
+      onProgress?.call(ScraperStatus(
+        currentAction: 'Apify Error: $e',
         isComplete: true,
         isError: true,
       ));

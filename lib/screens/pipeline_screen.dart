@@ -19,7 +19,7 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
     final leadsState = ref.watch(leadListProvider);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
       appBar: AppBar(
         title: const Text('Pipeline Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
@@ -50,7 +50,7 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
       ),
       child: DragTarget<Lead>(
         onAcceptWithDetails: (details) {
@@ -67,13 +67,13 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: candidateData.isNotEmpty 
-                      ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5) 
+                      ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5) 
                       : Colors.transparent,
                   border: Border(
-                    bottom: BorderSide(color: Colors.grey.withOpacity(0.2)),
-                    top: BorderSide(color: Colors.grey.withOpacity(0.1)),
-                    left: BorderSide(color: Colors.grey.withOpacity(0.1)),
-                    right: BorderSide(color: Colors.grey.withOpacity(0.1)),
+                    bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                    top: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
+                    left: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
+                    right: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
                   ),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 ),
@@ -87,7 +87,7 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.1),
+                        color: Colors.grey.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -135,7 +135,7 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       elevation: isDragging ? 8 : 1,
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+        side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(

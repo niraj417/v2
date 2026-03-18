@@ -4,6 +4,7 @@ import '../services/export_service.dart';
 import '../services/database_service.dart';
 import '../providers/lead_provider.dart';
 import '../providers/history_provider.dart';
+import '../providers/scraper_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -72,15 +73,52 @@ class SettingsScreen extends ConsumerWidget {
           const Text('Integrations & API', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
           const SizedBox(height: 16),
           ListTile(
+            title: const Text('Apify API Token'),
+            subtitle: Text(ref.watch(apifyTokenProvider).isEmpty 
+                ? 'No token configured. Using local WebView scraper.' 
+                : 'Token configured. Using high-performance Apify Cloud Scraper.'),
+            leading: const Icon(Icons.cloud_sync),
+            trailing: const Icon(Icons.edit),
+            onTap: () {
+              final controller = TextEditingController(text: ref.read(apifyTokenProvider));
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Apify API Token'),
+                  content: TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(
+                      labelText: 'Token',
+                      hintText: 'apify_api_...',
+                    ),
+                  ),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                    TextButton(
+                      onPressed: () {
+                        ref.read(apifyTokenProvider.notifier).updateToken(controller.text.trim());
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Apify token updated')),
+                        );
+                      },
+                      child: const Text('Save'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
             title: const Text('Google Places API Key'),
-            subtitle: const Text('Currently using local mock generator. Configure to use live Google Maps data.'),
+            subtitle: const Text('Reserved for future enrichment features.'),
             leading: const Icon(Icons.vpn_key),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // Placeholder for future configuration
-               ScaffoldMessenger.of(context).showSnackBar(
-                 const SnackBar(content: Text('API Configuration coming in future updates')),
-               );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('API configuration coming in a future update')),
+              );
             },
           ),
         ],
