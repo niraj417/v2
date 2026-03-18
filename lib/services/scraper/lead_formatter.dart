@@ -9,32 +9,24 @@ class LeadFormatter {
   ///   location.lat, location.lng, emails (array of strings)
   static Lead format(Map<String, dynamic> data, String keyword, String location) {
     // --- ID ---
-    // Use Google's placeId as the stable unique identifier.
-    final String placeId = data['placeId'] ?? '';
+    final String placeId = data['placeId'] ?? data['google_place_id'] ?? '';
     final String title = data['title'] ?? data['name'] ?? 'Unknown';
     final String safeId = placeId.isNotEmpty
         ? placeId
         : '${title}_${DateTime.now().millisecondsSinceEpoch}';
 
     // --- Category ---
-    // 'categoryName' is the primary category. Fall back to first entry in 'categories'.
-    String category = data['categoryName'] ?? '';
+    String category = data['categoryName'] ?? data['google_business_categories'] ?? '';
     if (category.isEmpty) {
       final List<dynamic>? cats = data['categories'] as List<dynamic>?;
-      if (cats != null && cats.isNotEmpty) {
-        category = cats.first.toString();
-      }
+      if (cats != null && cats.isNotEmpty) category = cats.first.toString();
     }
     if (category.isEmpty) category = keyword;
 
     // --- Phone ---
-    // Prefer formatted phone, fall back to unformatted.
-    final String phone = (data['phone'] as String?)?.trim().isNotEmpty == true
-        ? data['phone'] as String
-        : (data['phoneUnformatted'] ?? '') as String;
+    final String phone = data['phone_number'] ?? data['phone'] ?? data['phoneUnformatted'] ?? '';
 
     // --- Email ---
-    // 'emails' is a List<String> returned by the actor's email enrichment.
     String email = '';
     final dynamic rawEmails = data['emails'];
     if (rawEmails is List && rawEmails.isNotEmpty) {
@@ -44,30 +36,33 @@ class LeadFormatter {
     }
 
     // --- Rating ---
-    // 'totalScore' is a double (e.g., 4.7).
     final double rating =
-        double.tryParse(data['totalScore']?.toString() ?? '0') ?? 0.0;
+        double.tryParse(data['review_score']?.toString() ?? data['totalScore']?.toString() ?? '0') ?? 0.0;
 
     // --- Review Count ---
-    // 'reviewsCount' is an int.
     final int reviewCount =
-        int.tryParse(data['reviewsCount']?.toString() ?? '0') ?? 0;
+        int.tryParse(data['reviews_number']?.toString() ?? data['reviewsCount']?.toString() ?? '0') ?? 0;
 
     // --- Address ---
     final String address = data['address'] ?? data['street'] ?? '';
 
     // --- Coordinates ---
-    // 'location' is a nested object: { "lat": 37.7..., "lng": -122.4... }
     double latitude = 0.0;
     double longitude = 0.0;
-    final dynamic loc = data['location'];
-    if (loc is Map) {
-      latitude = double.tryParse(loc['lat']?.toString() ?? '0') ?? 0.0;
-      longitude = double.tryParse(loc['lng']?.toString() ?? '0') ?? 0.0;
+
+    if (data['latitude'] != null && data['longitude'] != null) {
+      latitude = double.tryParse(data['latitude'].toString()) ?? 0.0;
+      longitude = double.tryParse(data['longitude'].toString()) ?? 0.0;
+    } else {
+      final dynamic loc = data['location'];
+      if (loc is Map) {
+        latitude = double.tryParse(loc['lat']?.toString() ?? '0') ?? 0.0;
+        longitude = double.tryParse(loc['lng']?.toString() ?? '0') ?? 0.0;
+      }
     }
 
     // --- Website ---
-    final String website = data['website'] ?? data['url'] ?? '';
+    final String website = data['website_url'] ?? data['website'] ?? data['url'] ?? '';
 
     return Lead(
       id: safeId,

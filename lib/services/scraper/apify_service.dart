@@ -13,13 +13,35 @@ class ApifyService {
 
   ApifyService({required this.apiToken});
 
-  /// Builds a Google Maps search URL from a keyword and a plain-text location.
-  /// This is passed as [gmaps_url] so the actor can resolve the search area
-  /// correctly from a live Maps page rather than arbitrary coordinates.
-  String _buildGoogleMapsUrl(String keyword, String location) {
-    final query = Uri.encodeComponent('$keyword in $location');
-    // Base URL for a Google Maps text search — the actor accepts this format.
-    return 'https://www.google.com/maps/search/$query/';
+  /// Builds a Google Maps search URL from a keyword and a plain-text location
+  /// by geocoding the location to latitude/longitude using Nominatim.
+  /// This is required because actor sbEjxxfeFlEBHijJS needs coordinates in the URL.
+  Future<String> _buildGoogleMapsUrl(String keyword, String location) async {
+    final geoUrl = Uri.parse(
+        'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(location)}&format=json&limit=1');
+    
+    // Default fallback coordinates (e.g. San Francisco)
+    String lat = '37.7749';
+    String lng = '-122.4194';
+    
+    try {
+      final geoResponse = await http.get(
+        geoUrl,
+        headers: {'User-Agent': 'CRM_Leads_App/1.0'},
+      );
+      if (geoResponse.statusCode == 200) {
+        final geoData = jsonDecode(geoResponse.body) as List;
+        if (geoData.isNotEmpty) {
+          lat = geoData[0]['lat'];
+          lng = geoData[0]['lon'];
+        }
+      }
+    } catch (e) {
+      // Ignore geocoding errors and fallback to default
+    }
+
+    final query = Uri.encodeComponent(keyword);
+    return 'https://www.google.com/maps/search/$query/@$lat,$lng,13z/data=!3m1!4b1';
   }
 
   /// Starts the Apify actor with the given [keyword] and [location].
@@ -33,11 +55,11 @@ class ApifyService {
       'https://api.apify.com/v2/acts/$actorId/runs?token=$apiToken',
     );
 
-    final mapsUrl = _buildGoogleMapsUrl(keyword, location);
+    final mapsUrl = await _buildGoogleMapsUrl(keyword, location);
 
     // Input schema as required by actor sbEjxxfeFlEBHijJS
     final input = {
-      "search_query": "$keyword in $location",
+      "search_query": keyword,
       "gmaps_url": mapsUrl,
       "latitude": "",
       "longitude": "",
