@@ -12,7 +12,20 @@
           "package_name": "com.digitization.crm_leads_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "384227067713-ab9v50gda9mk3u6bcjoqev1knk3ni969.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.digitization.crm_leads_app",
+            "certificate_hash": "6985abc201f315286dab7cdee36fd264b44b27a9"
+          }
+        },
+        {
+          "client_id": "384227067713-q593c9dqv59d4qpjtdnnogqqosa25d7t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCtFGb79aCHX65ZM2fBVd7KRkDeq66HyF0"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "384227067713-q593c9dqv59d4qpjtdnnogqqosa25d7t.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "384227067713-nb1ud57e6rvc1tefc2c6smg3m9ak595g.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.digitization.crmLeadsApp"
+              }
+            }
+          ]
         }
       }
     }

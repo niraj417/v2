@@ -51,14 +51,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await googleSignIn.initialize();
       await googleSignIn.signOut(); // Ensure account picker appears
       final account = await googleSignIn.authenticate();
-      
-      final authHeaders = await account.authorizationClient.authorizationHeaders([]);
-      if (authHeaders == null) {
-        throw Exception('Failed to get authorization headers');
-      }
-      
+
       // Use the ID token from the account to create Firebase credential
       final idToken = account.authentication.idToken;
+      if (idToken == null) {
+        throw Exception('Failed to get Google ID token');
+      }
       final credential = GoogleAuthProvider.credential(
         idToken: idToken,
       );
