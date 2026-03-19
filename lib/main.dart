@@ -14,8 +14,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Initialize Google Sign In for Drive backup
-  await GoogleSignIn.instance.initialize();
+
   
   // In release mode, capture any uncaught Flutter framework errors silently
   // rather than showing the red error screen to end users.

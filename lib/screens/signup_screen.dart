@@ -54,17 +54,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      // google_sign_in v7 uses the singleton instance pattern
-      final googleSignIn = GoogleSignIn.instance;
-      await googleSignIn.initialize();
-      await googleSignIn.signOut(); // Ensure account picker appears
-      final account = await googleSignIn.authenticate();
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       
-      // Use the ID token from the account to create Firebase credential
-      final idToken = account.authentication.idToken;
       final credential = GoogleAuthProvider.credential(
-        idToken: idToken,
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
+
       await FirebaseAuth.instance.signInWithCredential(credential);
       await TeamService().initializeUserProfile();
       if (mounted) {
