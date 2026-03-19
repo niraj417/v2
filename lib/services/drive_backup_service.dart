@@ -19,23 +19,19 @@ class GoogleAuthClient extends http.BaseClient {
 }
 
 class DriveBackupService {
-  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: [drive.DriveApi.driveFileScope],
+  );
 
   Future<void> backupDatabaseToDrive(BuildContext? context, {bool silent = false}) async {
     try {
-      final scopes = [drive.DriveApi.driveFileScope];
-      
       // Force sign out to ensure account picker and permission prompts appear
       await _googleSignIn.signOut();
       
-      // Ensure initialized
-      await _googleSignIn.initialize();
-      final account = await _googleSignIn.authenticate(scopeHint: scopes);
-      
-      final authHeaders = await account.authorizationClient.authorizationHeaders(scopes);
-      if (authHeaders == null) {
-        throw Exception('Authorization headers not found');
-      }
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return;
+
+      final Map<String, String> authHeaders = await googleUser.authHeaders;
 
       final driveApi = drive.DriveApi(GoogleAuthClient(authHeaders));
 
@@ -77,15 +73,13 @@ class DriveBackupService {
 
   Future<void> restoreDatabaseFromDrive(BuildContext? context) async {
     try {
-      final scopes = [drive.DriveApi.driveFileScope];
       // Force sign out to show account picker
       await _googleSignIn.signOut();
       
-      await _googleSignIn.initialize();
-      final account = await _googleSignIn.authenticate(scopeHint: scopes);
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return;
 
-      final authHeaders = await account.authorizationClient.authorizationHeaders(scopes);
-      if (authHeaders == null) throw Exception('Authorization failed');
+      final Map<String, String> authHeaders = await googleUser.authHeaders;
 
       final driveApi = drive.DriveApi(GoogleAuthClient(authHeaders));
 
