@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "384227067713-ab9v50gda9mk3u6bcjoqev1knk3ni969.apps.googleusercontent.com",
+          "client_id": "384227067713-hnup9ra9uglfifihqd4r3455q7ppuqst.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.digitization.crm_leads_app",
-            "certificate_hash": "6985abc201f315286dab7cdee36fd264b44b27a9"
+            "certificate_hash": "a2063a8cc9747d2edce9dcb779471028e0ee6d1a"
           }
         },
         {
