@@ -1,0 +1,23 @@
+﻿Analyzing crm_leads_app...                                      
+
+   info - Unnecessary use of multiple underscores - lib\providers\lead_provider.dart:42:16 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\leads_list_screen.dart:52:24 - unnecessary_underscores
+
+flutter : 2 issues 
+found. (ran in 11.6s)
+At line:1 char:1
++ flutter analyze 2>&1 
+| Out-File -Encoding 
+utf8 analyze_out3.txt; 
+Get- ...
++ ~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (2 issues foun   
+ d. (ran in 11.6s):    
+String) [], Remote    
+Exception
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 

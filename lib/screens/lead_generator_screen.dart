@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../providers/lead_provider.dart';
 import '../providers/history_provider.dart';
 import '../providers/scraper_provider.dart';
 import '../services/scraper/scraper_engine.dart';
@@ -60,8 +59,7 @@ class _LeadGeneratorScreenState extends ConsumerState<LeadGeneratorScreen> {
               _lastGeneratedCount = status.importedCount;
               _isLoading = false;
             });
-            // Refresh providers
-            ref.read(leadListProvider.notifier).loadLeads();
+            // Refresh search history (leads auto-update via Firestore stream)
             ref.read(historyProvider.notifier).loadHistory();
             
             if (status.isError) {

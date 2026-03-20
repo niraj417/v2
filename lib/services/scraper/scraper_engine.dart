@@ -5,6 +5,7 @@ import 'webview_controller.dart';
 import 'lead_formatter.dart';
 import 'duplicate_filter.dart';
 import '../database_service.dart';
+import '../firebase_lead_service.dart';
 import 'apify_service.dart';
 
 class ScraperStatus {
@@ -28,21 +29,28 @@ class ScraperEngine {
   final ApifyService? apifyService;
   final DuplicateFilter _duplicateFilter = DuplicateFilter();
   final _random = Random();
+  String? _teamId;
 
   bool _isCancelled = false;
 
-  ScraperEngine(this.webviewController, {this.apifyService});
+  ScraperEngine(this.webviewController, {this.apifyService, String? teamId})
+      : _teamId = teamId;
 
   void stop() {
     _isCancelled = true;
   }
 
+  void setTeamId(String? teamId) {
+    _teamId = teamId;
+  }
+
   /// Main scraping loop that handles navigation, scrolling, and extraction.
   Future<void> scrape(
-    String keyword, 
-    String location, 
-    {int targetCount = 100, void Function(ScraperStatus)? onProgress}
-  ) async {
+    String keyword,
+    String location, {
+    int targetCount = 100,
+    void Function(ScraperStatus)? onProgress,
+  }) async {
     _isCancelled = false;
     _duplicateFilter.clear();
     int imported = 0;
@@ -56,17 +64,19 @@ class ScraperEngine {
     try {
       onProgress?.call(ScraperStatus(currentAction: 'Building search URL...'));
       final url = SearchUrlBuilder.build(keyword, location);
-      
-      onProgress?.call(ScraperStatus(currentAction: 'Loading Google Maps...'));
+
+      onProgress
+          ?.call(ScraperStatus(currentAction: 'Loading Google Maps...'));
       await webviewController.loadUrl(url);
 
-      // Initial wait for page rendering and consent handling (if any)
       await Future.delayed(const Duration(seconds: 6));
 
       bool endReached = false;
       int scrollAttempts = 0;
 
-      while (imported < targetCount && !endReached && scrollAttempts < 150) {
+      while (imported < targetCount &&
+          !endReached &&
+          scrollAttempts < 150) {
         if (_isCancelled) throw Exception('Cancelled by user');
 
         onProgress?.call(ScraperStatus(
@@ -81,13 +91,12 @@ class ScraperEngine {
         for (var data in listings) {
           if (_isCancelled) throw Exception('Cancelled by user');
           final lead = LeadFormatter.format(data, keyword, location);
-          
+
           if (_duplicateFilter.isNew(lead.id)) {
             try {
-              // Database handles internal deduplication as well
-              await DatabaseService.instance.insertLead(lead);
+              await FirebaseLeadService.instance.addLead(lead, teamId: _teamId);
               imported++;
-              
+
               onProgress?.call(ScraperStatus(
                 foundCount: found,
                 importedCount: imported,
@@ -96,7 +105,7 @@ class ScraperEngine {
 
               if (imported >= targetCount) break;
             } catch (e) {
-              // Skip failed inserts
+              // Skip individual insert failures
             }
           }
         }
@@ -110,61 +119,69 @@ class ScraperEngine {
         ));
 
         final canScrollPredict = await webviewController.scrollDown();
-        
-        // Wait for lazy loading to trigger
-        await Future.delayed(Duration(milliseconds: 2000 + _random.nextInt(2000)));
-        
+        await Future.delayed(
+            Duration(milliseconds: 2000 + _random.nextInt(2000)));
+
         if (!canScrollPredict) {
           endReached = await webviewController.isEndReached();
         }
-        
+
         scrollAttempts++;
       }
 
       if (imported > 0) {
-        await DatabaseService.instance.insertSearchHistory(keyword, location, imported);
+        // Keep search history in local SQLite (lightweight, not team-critical)
+        await DatabaseService.instance.insertSearchHistory(
+            keyword, location, imported);
       }
 
       onProgress?.call(ScraperStatus(
         foundCount: found,
         importedCount: imported,
-        currentAction: _isCancelled ? 'Scraping stopped by user.' : 'Scraping session finished successfully.',
+        currentAction: _isCancelled
+            ? 'Scraping stopped by user.'
+            : 'Scraping session finished successfully.',
         isComplete: true,
       ));
-      
     } catch (e) {
       onProgress?.call(ScraperStatus(
         foundCount: found,
         importedCount: imported,
         currentAction: 'Scraping stopped: $e',
         isComplete: true,
-        isError: e.toString().contains('Cancelled') ? false : true,
+        isError: !e.toString().contains('Cancelled'),
       ));
     }
   }
 
   Future<void> _scrapeWithApify(
-    String keyword, 
-    String location, 
-    int targetCount, 
-    void Function(ScraperStatus)? onProgress
+    String keyword,
+    String location,
+    int targetCount,
+    void Function(ScraperStatus)? onProgress,
   ) async {
     try {
-      onProgress?.call(ScraperStatus(currentAction: 'Starting Apify Cloud Actor...'));
-      final runId = await apifyService!.startScrape(keyword, location, maxResults: targetCount);
-      
-      onProgress?.call(ScraperStatus(currentAction: 'Actor running. Waiting for results...'));
-      final runData = await apifyService!.waitForCompletion(runId, isCancelled: () => _isCancelled);
-      
-      onProgress?.call(ScraperStatus(currentAction: 'Processing results...'));
+      onProgress?.call(
+          ScraperStatus(currentAction: 'Starting Apify Cloud Actor...'));
+      final runId = await apifyService!
+          .startScrape(keyword, location, maxResults: targetCount);
+
+      onProgress?.call(ScraperStatus(
+          currentAction: 'Actor running. Waiting for results...'));
+      final runData = await apifyService!
+          .waitForCompletion(runId, isCancelled: () => _isCancelled);
+
+      onProgress?.call(
+          ScraperStatus(currentAction: 'Processing results...'));
       final datasetId = runData['defaultDatasetId'];
-      final leads = await apifyService!.fetchResults(datasetId, keyword, location);
-      
+      final leads =
+          await apifyService!.fetchResults(datasetId, keyword, location);
+
       int imported = 0;
       for (var lead in leads) {
         if (_duplicateFilter.isNew(lead.id)) {
           try {
-            await DatabaseService.instance.insertLead(lead);
+            await FirebaseLeadService.instance.addLead(lead, teamId: _teamId);
             imported++;
             onProgress?.call(ScraperStatus(
               foundCount: leads.length,
@@ -178,7 +195,8 @@ class ScraperEngine {
       }
 
       if (imported > 0) {
-        await DatabaseService.instance.insertSearchHistory(keyword, location, imported);
+        await DatabaseService.instance.insertSearchHistory(
+            keyword, location, imported);
       }
 
       onProgress?.call(ScraperStatus(

@@ -113,7 +113,7 @@ class LeadDetailsScreen extends ConsumerWidget {
                         .toList(),
                     onChanged: (newStatus) {
                       if (newStatus != null) {
-                        ref.read(leadListProvider.notifier).updateLeadStatus(currentLead.id, newStatus);
+                        ref.read(leadActionsProvider).updateLeadStatus(currentLead.id, newStatus);
                       }
                     },
                   ),
@@ -144,6 +144,14 @@ class LeadDetailsScreen extends ConsumerWidget {
                     _buildMetaRow('Generated On', currentLead.createdAt.toString().split('.').first),
                     const Divider(height: 24),
                     _buildMetaRow('Rating', '${currentLead.rating} (${currentLead.reviewCount} reviews)'),
+                    if (currentLead.addedByEmail.isNotEmpty) ...[
+                      const Divider(height: 24),
+                      _buildMetaRow('Added By', currentLead.addedByEmail),
+                    ],
+                    if (currentLead.claimedByEmail != null) ...[
+                      const Divider(height: 24),
+                      _buildMetaRow('Claimed By', currentLead.claimedByEmail!),
+                    ],
                   ],
                 ),
               ),

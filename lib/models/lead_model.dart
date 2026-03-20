@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Lead {
   final String id;
   final String businessName;
@@ -15,6 +17,13 @@ class Lead {
   final String leadStatus; // New, Contacted, Interested, Not Interested, Closed
   final DateTime createdAt;
 
+  // Team & Firebase fields
+  final String? teamId;        // Team this lead belongs to (null if solo user)
+  final String addedBy;        // UID of user who added the lead
+  final String addedByEmail;   // Email of user who added the lead
+  final String? claimedBy;     // UID of team member who claimed the lead (null = unclaimed)
+  final String? claimedByEmail; // Email of member who claimed (for display)
+
   Lead({
     required this.id,
     required this.businessName,
@@ -31,6 +40,11 @@ class Lead {
     required this.location,
     required this.leadStatus,
     required this.createdAt,
+    this.teamId,
+    required this.addedBy,
+    required this.addedByEmail,
+    this.claimedBy,
+    this.claimedByEmail,
   });
 
   Map<String, dynamic> toMap() {
@@ -53,23 +67,81 @@ class Lead {
     };
   }
 
+  /// Serialize for Firestore (uses server-friendly field names)
+  Map<String, dynamic> toFirestore() {
+    return {
+      'id': id,
+      'businessName': businessName,
+      'category': category,
+      'phone': phone,
+      'email': email,
+      'website': website,
+      'rating': rating,
+      'reviewCount': reviewCount,
+      'address': address,
+      'latitude': latitude,
+      'longitude': longitude,
+      'keyword': keyword,
+      'location': location,
+      'leadStatus': leadStatus,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'teamId': teamId,
+      'addedBy': addedBy,
+      'addedByEmail': addedByEmail,
+      'claimedBy': claimedBy,
+      'claimedByEmail': claimedByEmail,
+    };
+  }
+
   factory Lead.fromMap(Map<String, dynamic> map) {
     return Lead(
-      id: map['id'],
-      businessName: map['business_name'],
+      id: map['id'] ?? '',
+      businessName: map['business_name'] ?? '',
       category: map['category'] ?? '',
       phone: map['phone'] ?? '',
       email: map['email'] ?? '',
       website: map['website'] ?? '',
-      rating: map['rating']?.toDouble() ?? 0.0,
-      reviewCount: map['review_count'] ?? 0,
+      rating: (map['rating'] as num?)?.toDouble() ?? 0.0,
+      reviewCount: map['review_count'] as int? ?? 0,
       address: map['address'] ?? '',
-      latitude: map['latitude']?.toDouble() ?? 0.0,
-      longitude: map['longitude']?.toDouble() ?? 0.0,
+      latitude: (map['latitude'] as num?)?.toDouble() ?? 0.0,
+      longitude: (map['longitude'] as num?)?.toDouble() ?? 0.0,
       keyword: map['keyword'] ?? '',
       location: map['location'] ?? '',
       leadStatus: map['lead_status'] ?? 'New',
-      createdAt: DateTime.parse(map['created_at']),
+      createdAt: DateTime.parse(map['created_at'] as String),
+      addedBy: map['addedBy'] ?? '',
+      addedByEmail: map['addedByEmail'] ?? '',
+      teamId: map['teamId'],
+      claimedBy: map['claimedBy'],
+      claimedByEmail: map['claimedByEmail'],
+    );
+  }
+
+  /// Deserialize from a Firestore DocumentSnapshot
+  factory Lead.fromFirestore(DocumentSnapshot doc) {
+    final map = doc.data() as Map<String, dynamic>;
+    return Lead(
+      id: doc.id,
+      businessName: map['businessName'] ?? '',
+      category: map['category'] ?? '',
+      phone: map['phone'] ?? '',
+      email: map['email'] ?? '',
+      website: map['website'] ?? '',
+      rating: (map['rating'] as num?)?.toDouble() ?? 0.0,
+      reviewCount: map['reviewCount'] as int? ?? 0,
+      address: map['address'] ?? '',
+      latitude: (map['latitude'] as num?)?.toDouble() ?? 0.0,
+      longitude: (map['longitude'] as num?)?.toDouble() ?? 0.0,
+      keyword: map['keyword'] ?? '',
+      location: map['location'] ?? '',
+      leadStatus: map['leadStatus'] ?? 'New',
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      teamId: map['teamId'],
+      addedBy: map['addedBy'] ?? '',
+      addedByEmail: map['addedByEmail'] ?? '',
+      claimedBy: map['claimedBy'],
+      claimedByEmail: map['claimedByEmail'],
     );
   }
 
@@ -89,6 +161,11 @@ class Lead {
     String? location,
     String? leadStatus,
     DateTime? createdAt,
+    Object? teamId = _sentinel,
+    String? addedBy,
+    String? addedByEmail,
+    Object? claimedBy = _sentinel,
+    Object? claimedByEmail = _sentinel,
   }) {
     return Lead(
       id: id ?? this.id,
@@ -106,6 +183,16 @@ class Lead {
       location: location ?? this.location,
       leadStatus: leadStatus ?? this.leadStatus,
       createdAt: createdAt ?? this.createdAt,
+      teamId: teamId == _sentinel ? this.teamId : teamId as String?,
+      addedBy: addedBy ?? this.addedBy,
+      addedByEmail: addedByEmail ?? this.addedByEmail,
+      claimedBy: claimedBy == _sentinel ? this.claimedBy : claimedBy as String?,
+      claimedByEmail: claimedByEmail == _sentinel
+          ? this.claimedByEmail
+          : claimedByEmail as String?,
     );
   }
 }
+
+// Sentinel value to differentiate "not provided" from explicit null in copyWith
+const Object _sentinel = Object();

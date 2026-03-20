@@ -85,7 +85,7 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
         onAcceptWithDetails: (details) {
           final lead = details.data;
           if (lead.leadStatus != stage) {
-            ref.read(leadListProvider.notifier).updateLeadStatus(lead.id, stage);
+            ref.read(leadActionsProvider).updateLeadStatus(lead.id, stage);
           }
         },
         builder: (context, candidateData, rejectedData) {

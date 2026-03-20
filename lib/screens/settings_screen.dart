@@ -166,8 +166,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               final nav = Navigator.of(context);
               final sm = ScaffoldMessenger.of(context);
               
+              // Clears local SQLite search history only
+              // Firestore leads are persisted; use Firebase Console to bulk-delete
               await DatabaseService.instance.clearAll();
-              ref.read(leadListProvider.notifier).loadLeads();
               ref.read(historyProvider.notifier).loadHistory();
               
               if (mounted) {

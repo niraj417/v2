@@ -2,12 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/scraper/webview_controller.dart';
 import '../services/scraper/scraper_engine.dart';
 import '../services/scraper/apify_service.dart';
+import 'lead_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ---------------------------------------------------------------------------
-// Apify token — editable by the user from Settings screen.
-// Migrated from deprecated StateProvider to Notifier (Riverpod 3).
-// ---------------------------------------------------------------------------
+// ─── Apify Token ─────────────────────────────────────────────────────────────
 
 class _ApifyTokenNotifier extends Notifier<String> {
   static const _tokenKey = 'apify_token_prefs';
@@ -37,9 +35,7 @@ final apifyTokenProvider = NotifierProvider<_ApifyTokenNotifier, String>(
   _ApifyTokenNotifier.new,
 );
 
-// ---------------------------------------------------------------------------
-// Apify service — derived from the token; null when token is empty.
-// ---------------------------------------------------------------------------
+// ─── Apify Service ────────────────────────────────────────────────────────────
 
 final apifyServiceProvider = Provider<ApifyService?>((ref) {
   final token = ref.watch(apifyTokenProvider);
@@ -47,28 +43,27 @@ final apifyServiceProvider = Provider<ApifyService?>((ref) {
   return ApifyService(apiToken: token);
 });
 
-// ---------------------------------------------------------------------------
-// WebView controller — single instance for the background scraper widget.
-// ---------------------------------------------------------------------------
+// ─── WebView Controller ───────────────────────────────────────────────────────
 
-final scraperWebviewControllerProvider = Provider<ScraperWebviewController>((ref) {
+final scraperWebviewControllerProvider =
+    Provider<ScraperWebviewController>((ref) {
   return ScraperWebviewController();
 });
 
-// ---------------------------------------------------------------------------
-// Scraper engine — orchestrates Apify or WebView scraping.
-// ---------------------------------------------------------------------------
+// ─── Scraper Engine ───────────────────────────────────────────────────────────
 
+/// Builds the scraper engine and automatically injects the current team ID,
+/// so that scraped leads are always saved under the correct team scope.
 final scraperEngineProvider = Provider<ScraperEngine>((ref) {
   final controller = ref.watch(scraperWebviewControllerProvider);
   final apifyService = ref.watch(apifyServiceProvider);
-  return ScraperEngine(controller, apifyService: apifyService);
+  final teamAsync = ref.watch(activeTeamProvider);
+
+  final teamId = teamAsync.value?['id'] as String?;
+  return ScraperEngine(controller, apifyService: apifyService, teamId: teamId);
 });
 
-// ---------------------------------------------------------------------------
-// Scraper status — real-time progress updates.
-// Migrated from deprecated StateProvider to Notifier (Riverpod 3).
-// ---------------------------------------------------------------------------
+// ─── Scraper Status ───────────────────────────────────────────────────────────
 
 class _ScraperStatusNotifier extends Notifier<ScraperStatus> {
   @override
@@ -79,6 +74,7 @@ class _ScraperStatusNotifier extends Notifier<ScraperStatus> {
   }
 }
 
-final scraperStatusProvider = NotifierProvider<_ScraperStatusNotifier, ScraperStatus>(
+final scraperStatusProvider =
+    NotifierProvider<_ScraperStatusNotifier, ScraperStatus>(
   _ScraperStatusNotifier.new,
 );

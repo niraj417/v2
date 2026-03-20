@@ -1,0 +1,33 @@
+﻿Analyzing crm_leads_app...                                      
+
+   info - Unnecessary use of multiple underscores - lib\providers\lead_provider.dart:42:16 - unnecessary_underscores
+  error - The getter 'valueOrNull' isn't defined for the type 'AsyncValue<Map<String, dynamic>?>' - lib\providers\lead_provider.dart:59:30 - undefined_getter
+  error - The getter 'valueOrNull' isn't defined for the type 'AsyncValue<Map<String, dynamic>?>' - lib\providers\scraper_provider.dart:62:28 - undefined_getter
+warning - Unused import: '../providers/lead_provider.dart' - lib\screens\lead_generator_screen.dart:4:8 - unused_import
+   info - Unnecessary use of multiple underscores - lib\screens\leads_list_screen.dart:52:24 - unnecessary_underscores
+  error - The getter 'valueOrNull' isn't defined for the type 'AsyncValue<Map<String, dynamic>?>' - lib\screens\leads_list_screen.dart:236:31 - undefined_getter
+  error - The getter 'valueOrNull' isn't defined for the type 'AsyncValue<Map<String, dynamic>?>' - lib\screens\leads_list_screen.dart:237:39 - undefined_getter
+  error - The getter 'notifier' isn't defined for the type 'StreamProvider<List<Lead>>' - lib\screens\settings_screen.dart:170:41 - undefined_getter
+  error - The named parameter 'addedBy' is required, but there's no corresponding argument - lib\services\lead_generator_service.dart:26:20 - missing_required_argument
+  error - The named parameter 'addedByEmail' is required, but there's no corresponding argument - lib\services\lead_generator_service.dart:26:20 - missing_required_argument
+  error - The named parameter 'addedBy' is required, but there's no corresponding argument - lib\services\scraper\lead_formatter.dart:67:12 - missing_required_argument
+  error - The named parameter 'addedByEmail' is required, but there's no corresponding argument - lib\services\scraper\lead_formatter.dart:67:12 - missing_required_argument
+
+flutter : 12 issues 
+found. (ran in 9.5s)
+At line:1 char:1
++ flutter analyze 2>&1 
+| Out-File -Encoding 
+utf8 analyze_out2.txt; 
+Get- ...
++ ~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (12 issues fou   
+ nd. (ran in 9.5s):    
+String) [], Remote    
+Exception
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 

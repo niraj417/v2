@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/lead_model.dart';
 import '../screens/dashboard_screen.dart';
@@ -12,17 +14,36 @@ import '../screens/lead_details_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/signup_screen.dart';
 import '../screens/team_management_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
+/// A [ChangeNotifier] that listens to a [Stream] and notifies listeners
+/// whenever the stream emits. Used to make GoRouter react to auth changes.
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/',
+  // Reacts to auth state changes — fires redirect every time user logs in or out
+  refreshListenable: GoRouterRefreshStream(FirebaseAuth.instance.authStateChanges()),
   redirect: (context, state) {
     final user = FirebaseAuth.instance.currentUser;
     final isLoggedIn = user != null;
-    final isGoingToLoginOrSignup = state.matchedLocation == '/login' || state.matchedLocation == '/signup';
+    final isGoingToLoginOrSignup =
+        state.matchedLocation == '/login' || state.matchedLocation == '/signup';
 
     if (!isLoggedIn && !isGoingToLoginOrSignup) {
       return '/login';
@@ -74,7 +95,8 @@ final appRouter = GoRouter(
                 GoRoute(
                   path: 'details',
                   parentNavigatorKey: _rootNavigatorKey,
-                  builder: (context, state) => LeadDetailsScreen(lead: state.extra as Lead),
+                  builder: (context, state) =>
+                      LeadDetailsScreen(lead: state.extra as Lead),
                 ),
               ],
             ),
@@ -98,11 +120,11 @@ final appRouter = GoRouter(
         ),
       ],
     ),
-    // Added a global route alternative just in case we route from pipeline directly
     GoRoute(
       path: '/lead_details',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => LeadDetailsScreen(lead: state.extra as Lead),
+      builder: (context, state) =>
+          LeadDetailsScreen(lead: state.extra as Lead),
     ),
     GoRoute(
       path: '/team_management',
