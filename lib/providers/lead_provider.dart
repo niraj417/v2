@@ -30,11 +30,13 @@ final activeTeamProvider = StreamProvider<Map<String, dynamic>?>((ref) {
 final leadListProvider = StreamProvider<List<Lead>>((ref) {
   final teamAsync = ref.watch(activeTeamProvider);
   final leadService = FirebaseLeadService.instance;
+  final userId = FirebaseAuth.instance.currentUser?.uid;
 
   return teamAsync.when(
     data: (team) {
-      if (team != null) {
-        return leadService.streamTeamLeads(team['id'] as String);
+      if (team != null && userId != null) {
+        final isOwner = team['ownerId'] == userId;
+        return leadService.streamTeamLeads(team['id'] as String, isOwner: isOwner, uid: userId);
       }
       return leadService.streamMyLeads();
     },

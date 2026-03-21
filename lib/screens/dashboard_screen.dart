@@ -1,5 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/history_provider.dart';
 
@@ -12,79 +14,98 @@ class DashboardScreen extends ConsumerWidget {
     final historyState = ref.watch(historyProvider);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+      extendBodyBehindAppBar: true,
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        title: const Text('My Leads', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('My Leads', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 24)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.search, color: Colors.white), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.notifications_outlined, color: Colors.white), onPressed: () => context.push('/notifications')),
         ],
       ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Overview',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildStatCards(context, stats),
-                  const SizedBox(height: 32),
-                  const Text(
-                    'Recent Searches',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
+      body: Stack(
+        children: [
+          // Ambient Glow Top Left
+          Positioned(
+            top: -100,
+            left: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF3B82F6)),
             ),
           ),
-          historyState.when(
-            data: (history) {
-              if (history.isEmpty) {
-                return const SliverToBoxAdapter(
+          // Ambient Glow Bottom Right
+          Positioned(
+            bottom: -50,
+            right: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF7C3AED)),
+            ),
+          ),
+          // Blur overlay
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+          
+          SafeArea(
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text('No search history yet. Go to Generate to start.'),
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Overview',
+                          style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        const SizedBox(height: 24),
+                        _buildStatCards(context, stats),
+                        const SizedBox(height: 48),
+                        Text(
+                          'Recent Searches',
+                          style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
                   ),
-                );
-              }
-              return SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final item = history[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                          child: Icon(Icons.business_center, color: Theme.of(context).colorScheme.primary),
+                ),
+                historyState.when(
+                  data: (history) {
+                    if (history.isEmpty) {
+                      return SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                          child: Text('No search history yet. Go to Generate to start.', style: GoogleFonts.inter(color: const Color(0xFF94A3B8))),
                         ),
-                        title: Text('${item['keyword']} in ${item['location']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('Generated ${item['leads_generated']} leads'),
-                        trailing: Text(
-                          item['created_at'].toString().split('T').first,
-                          style: const TextStyle(fontSize: 12),
-                        ),
+                      );
+                    }
+                    return SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final item = history[index];
+                          return _buildHistoryCard(context, item);
+                        },
+                        childCount: history.length,
                       ),
                     );
                   },
-                  childCount: history.length,
+                  loading: () => const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator())),
+                  error: (e, st) => SliverToBoxAdapter(child: Center(child: Text('Error: $e', style: const TextStyle(color: Colors.red)))),
                 ),
-              );
-            },
-            loading: () => const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator())),
-            error: (e, st) => SliverToBoxAdapter(child: Center(child: Text('Error: $e'))),
+                const SliverToBoxAdapter(child: SizedBox(height: 32)),
+              ],
+            ),
           ),
         ],
       ),
@@ -98,21 +119,19 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             Expanded(
               child: _buildCard(
-                context, 
                 title: 'Total Leads', 
                 value: stats['total'].toString(), 
                 icon: Icons.group,
-                color: Colors.blue,
+                color: const Color(0xFF3B82F6),
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: _buildCard(
-                context, 
                 title: 'Contacted', 
                 value: stats['contacted'].toString(), 
                 icon: Icons.phone_in_talk,
-                color: Colors.amber.shade700,
+                color: const Color(0xFFF59E0B),
               ),
             ),
           ],
@@ -122,21 +141,19 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             Expanded(
               child: _buildCard(
-                context, 
                 title: 'Converted', 
                 value: stats['converted'].toString(), 
                 icon: Icons.check_circle,
-                color: Colors.green,
+                color: const Color(0xFF10B981),
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: _buildCard(
-                context, 
                 title: 'Conversion Rate', 
                 value: stats['total']! > 0 ? '${((stats['converted']! / stats['total']!) * 100).toStringAsFixed(1)}%' : '0%', 
                 icon: Icons.trending_up,
-                color: Colors.purple,
+                color: const Color(0xFF8B5CF6),
               ),
             ),
           ],
@@ -145,36 +162,80 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCard(BuildContext context, {required String title, required String value, required IconData icon, required Color color}) {
+  Widget _buildCard({required String title, required String value, required IconData icon, required Color color}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 16),
           Text(
             value,
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           const SizedBox(height: 4),
           Text(
             title,
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+            style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w500),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryCard(BuildContext context, Map<String, dynamic> item) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.business_center, color: Color(0xFF60A5FA), size: 20),
+        ),
+        title: Text(
+          '${item['keyword']} in ${item['location']}', 
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 15)
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4.0),
+          child: Text(
+            'Generated ${item['leads_generated']} leads',
+            style: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 13),
+          ),
+        ),
+        trailing: Text(
+          item['created_at'].toString().split('T').first,
+          style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+        ),
       ),
     );
   }

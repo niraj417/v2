@@ -177,20 +177,25 @@ class ScraperEngine {
       final leads =
           await apifyService!.fetchResults(datasetId, keyword, location);
 
+      // Reset duplicate filter for this Apify run so placeId-based
+      // deduplication matches the WebView path behaviour.
+      _duplicateFilter.clear();
+
       int imported = 0;
       for (var lead in leads) {
-        if (_duplicateFilter.isNew(lead.id)) {
-          try {
-            await FirebaseLeadService.instance.addLead(lead, teamId: _teamId);
-            imported++;
-            onProgress?.call(ScraperStatus(
-              foundCount: leads.length,
-              importedCount: imported,
-              currentAction: 'Imported: ${lead.businessName}',
-            ));
-          } catch (e) {
-            // Skip failed inserts
-          }
+        if (_isCancelled) break;
+        // Skip in-dataset duplicates (same placeId appearing twice in results)
+        if (!_duplicateFilter.isNew(lead.id)) continue;
+        try {
+          await FirebaseLeadService.instance.addLead(lead, teamId: _teamId);
+          imported++;
+          onProgress?.call(ScraperStatus(
+            foundCount: leads.length,
+            importedCount: imported,
+            currentAction: 'Imported: ${lead.businessName}',
+          ));
+        } catch (e) {
+          // Skip individual insert failures (e.g. Firestore phone-duplicate guard)
         }
       }
 

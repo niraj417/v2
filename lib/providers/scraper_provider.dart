@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/scraper/webview_controller.dart';
 import '../services/scraper/scraper_engine.dart';
 import '../services/scraper/apify_service.dart';
@@ -17,17 +19,65 @@ class _ApifyTokenNotifier extends Notifier<String> {
   }
 
   Future<void> _loadToken() async {
+    // 1. Try SharedPreferences first (instant, survives sessions on same install)
     final prefs = await SharedPreferences.getInstance();
-    final savedToken = prefs.getString(_tokenKey);
-    if (savedToken != null && savedToken.isNotEmpty) {
-      state = savedToken;
+    final cached = prefs.getString(_tokenKey);
+    if (cached != null && cached.isNotEmpty) {
+      state = cached;
+      return;
+    }
+
+    // 2. Fallback: load from Firestore (persists across reinstalls)
+    await _loadFromFirestore();
+  }
+
+  Future<void> _loadFromFirestore() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('settings')
+          .doc('apify')
+          .get();
+
+      if (doc.exists) {
+        final token = doc.data()?['token'] as String? ?? '';
+        if (token.isNotEmpty) {
+          state = token;
+          // Cache locally for next launch
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(_tokenKey, token);
+        }
+      }
+    } catch (_) {
+      // Firestore unavailable — continue with empty token
     }
   }
 
   Future<void> updateToken(String newToken) async {
     state = newToken;
+
+    // Save to SharedPreferences (fast, local cache)
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, newToken);
+
+    // Save to Firestore (persists across reinstalls)
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('settings')
+            .doc('apify')
+            .set({'token': newToken}, SetOptions(merge: true));
+      }
+    } catch (_) {
+      // Firestore write failed — token is still cached locally
+    }
   }
 }
 

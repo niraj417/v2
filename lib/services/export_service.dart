@@ -1,5 +1,5 @@
-import 'dart:typed_data';
-import 'package:file_saver/file_saver.dart';
+import 'dart:io';
+import 'package:permission_handler/permission_handler.dart';
 import '../models/lead_model.dart';
 
 class ExportService {
@@ -7,7 +7,14 @@ class ExportService {
     try {
       if (leads.isEmpty) return null;
 
-      if (leads.isEmpty) return null;
+      // Request permission
+      var status = await Permission.manageExternalStorage.request();
+      if (!status.isGranted) {
+        status = await Permission.storage.request();
+        if (!status.isGranted) {
+          return null;
+        }
+      }
 
       List<List<dynamic>> rows = [];
       
@@ -46,18 +53,19 @@ class ExportService {
       }
 
       String csv = rows.map((row) => row.map((e) => '"${e.toString().replaceAll('"', '""')}"').join(',')).join('\n');
-      Uint8List bytes = Uint8List.fromList(csv.codeUnits);
       
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       
-      String fileName = await FileSaver.instance.saveFile(
-        name: 'leads_export_$timestamp',
-        bytes: bytes,
-        fileExtension: 'csv',
-        mimeType: MimeType.csv,
-      );
+      // Save directly to folder
+      final directory = Directory('/storage/emulated/0/Exported Leads');
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
       
-      return fileName;
+      final file = File('${directory.path}/leads_export_$timestamp.csv');
+      await file.writeAsString(csv);
+      
+      return file.path;
     } catch (_) {
       // Export failed silently — caller checks for null return value.
       return null;

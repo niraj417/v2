@@ -14,6 +14,7 @@ import '../screens/lead_details_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/signup_screen.dart';
 import '../screens/team_management_screen.dart';
+import '../screens/notifications_screen.dart';
 
 /// A [ChangeNotifier] that listens to a [Stream] and notifies listeners
 /// whenever the stream emits. Used to make GoRouter react to auth changes.
@@ -130,6 +131,11 @@ final appRouter = GoRouter(
       path: '/team_management',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const TeamManagementScreen(),
+    ),
+    GoRoute(
+      path: '/notifications',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const NotificationsScreen(),
     ),
   ],
 );

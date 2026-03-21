@@ -1,6 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/lead_model.dart';
+import 'drive_backup_service.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._init();
@@ -62,6 +64,23 @@ class DatabaseService {
     ''');
   }
 
+  Future<void> close() async {
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
+    }
+  }
+
+  Future<void> _triggerAutoSync() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool('auto_sync_drive') == true) {
+        // Fire and forget
+        DriveBackupService().backupDatabaseToDrive(null, silent: true);
+      }
+    } catch (_) {}
+  }
+
   Future<void> insertLead(Lead lead) async {
     final db = await instance.database;
     
@@ -74,6 +93,7 @@ class DatabaseService {
 
     if (existing.isEmpty) {
       await db.insert('leads', lead.toMap());
+      _triggerAutoSync();
     }
   }
 
@@ -85,6 +105,7 @@ class DatabaseService {
       'leads_generated': count,
       'created_at': DateTime.now().toIso8601String(),
     });
+    _triggerAutoSync();
   }
 
   Future<List<Lead>> getAllLeads() async {
@@ -106,6 +127,7 @@ class DatabaseService {
       where: 'id = ?',
       whereArgs: [id],
     );
+    _triggerAutoSync();
   }
 
   Future<void> updateLead(Lead lead) async {
@@ -116,6 +138,7 @@ class DatabaseService {
       where: 'id = ?',
       whereArgs: [lead.id],
     );
+    _triggerAutoSync();
   }
 
   Future<void> deleteLead(String id) async {
@@ -125,11 +148,13 @@ class DatabaseService {
       where: 'id = ?',
       whereArgs: [id],
     );
+    _triggerAutoSync();
   }
 
-  Future<void> clearAll() async {
+  Future<void> clearMyData() async {
     final db = await instance.database;
     await db.delete('leads');
     await db.delete('search_history');
+    _triggerAutoSync();
   }
 }

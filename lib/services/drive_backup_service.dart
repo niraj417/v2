@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
@@ -19,20 +20,35 @@ class GoogleAuthClient extends http.BaseClient {
 }
 
 class DriveBackupService {
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
+  // Persistent instance — avoids re-creating on each call which can break the OAuth flow
+  static final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: [drive.DriveApi.driveFileScope],
   );
 
+  /// Returns a signed-in [GoogleSignInAccount], trying silent sign-in first.
+  Future<GoogleSignInAccount?> _getSignedInAccount() async {
+    // Try silent sign-in first (uses cached credentials, avoids browser popup)
+    try {
+      final silentUser = await _googleSignIn.signInSilently();
+      if (silentUser != null) return silentUser;
+    } catch (_) {
+      // Silent sign-in failed — fall through to interactive sign-in
+    }
+
+    // Interactive sign-in: shows the account picker + permission dialog
+    try {
+      return await _googleSignIn.signIn();
+    } on PlatformException catch (e) {
+      throw Exception('Google Sign-In failed: ${e.message ?? e.code}');
+    }
+  }
+
   Future<void> backupDatabaseToDrive(BuildContext? context, {bool silent = false}) async {
     try {
-      // Force sign out to ensure account picker and permission prompts appear
-      await _googleSignIn.signOut();
-      
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return;
+      final googleUser = await _getSignedInAccount();
+      if (googleUser == null) return; // User cancelled
 
       final Map<String, String> authHeaders = await googleUser.authHeaders;
-
       final driveApi = drive.DriveApi(GoogleAuthClient(authHeaders));
 
       final dbPath = await DatabaseService.instance.getDatabasePath();
@@ -54,7 +70,7 @@ class DriveBackupService {
       } else {
         await driveApi.files.create(driveFile, uploadMedia: media);
       }
-      
+
       final ctx = context;
       if (!silent && ctx != null && ctx.mounted) {
         ScaffoldMessenger.of(ctx).showSnackBar(
@@ -65,7 +81,10 @@ class DriveBackupService {
       final ctx = context;
       if (!silent && ctx != null && ctx.mounted) {
         ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text('Backup failed: $error')),
+          SnackBar(
+            content: Text('Backup failed: $error'),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     }
@@ -73,14 +92,10 @@ class DriveBackupService {
 
   Future<void> restoreDatabaseFromDrive(BuildContext? context) async {
     try {
-      // Force sign out to show account picker
-      await _googleSignIn.signOut();
-      
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return;
+      final googleUser = await _getSignedInAccount();
+      if (googleUser == null) return; // User cancelled
 
       final Map<String, String> authHeaders = await googleUser.authHeaders;
-
       final driveApi = drive.DriveApi(GoogleAuthClient(authHeaders));
 
       final fileList = await driveApi.files.list(
@@ -94,16 +109,23 @@ class DriveBackupService {
 
       final fileId = fileList.files!.first.id!;
       final drive.Media response = await driveApi.files.get(
-        fileId, 
+        fileId,
         downloadOptions: drive.DownloadOptions.fullMedia,
       ) as drive.Media;
 
       final dbPath = await DatabaseService.instance.getDatabasePath();
-      final localFile = File(dbPath);
       
+      // Close the database to release the SQLite lock before overwriting
+      await DatabaseService.instance.close();
+      
+      final localFile = File(dbPath);
+
       final IOSink sink = localFile.openWrite();
       await sink.addStream(response.stream);
       await sink.close();
+      
+      // Re-open/initialize the database so it's ready for immediate use
+      await DatabaseService.instance.database;
 
       final ctx = context;
       if (ctx != null && ctx.mounted) {
@@ -115,7 +137,10 @@ class DriveBackupService {
       final ctx = context;
       if (ctx != null && ctx.mounted) {
         ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text('Restore failed: $error')),
+          SnackBar(
+            content: Text('Restore failed: $error'),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     }

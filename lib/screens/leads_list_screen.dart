@@ -1,8 +1,10 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../providers/lead_provider.dart';
 import '../services/team_service.dart';
 import '../models/lead_model.dart';
@@ -20,7 +22,7 @@ class _LeadsListScreenState extends ConsumerState<LeadsListScreen> {
   String? _filterByMember; // null = show all (owner filter)
 
   final List<String> _statuses = [
-    'All', 'New', 'Contacted', 'Interested', 'Not Interested', 'Closed'
+    'All', 'Claimed', 'New', 'Contacted', 'Interested', 'Not Interested', 'Closed'
   ];
 
   @override
@@ -30,10 +32,11 @@ class _LeadsListScreenState extends ConsumerState<LeadsListScreen> {
     final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Scaffold(
-      backgroundColor:
-          Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        title: const Text('My Leads', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text('My Leads', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 24)),
         actions: [
           // Owner-only member filter
           teamAsync.when(
@@ -53,24 +56,28 @@ class _LeadsListScreenState extends ConsumerState<LeadsListScreen> {
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(110),
+          preferredSize: const Size.fromHeight(120),
           child: Column(
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search by name, phone or keyword...',
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true,
-                    fillColor: Theme.of(context).colorScheme.surface,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
-                    ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
                   ),
-                  onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
+                  child: TextField(
+                    style: GoogleFonts.inter(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Search by name, phone or keyword...',
+                      hintStyle: GoogleFonts.inter(color: const Color(0xFF94A3B8)),
+                      prefixIcon: const Icon(Icons.search, color: Color(0xFF94A3B8)),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                    ),
+                    onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
+                  ),
                 ),
               ),
               SingleChildScrollView(
@@ -81,21 +88,25 @@ class _LeadsListScreenState extends ConsumerState<LeadsListScreen> {
                     final isSelected = _selectedStatus == status;
                     return Padding(
                       padding: const EdgeInsets.only(right: 8.0),
-                      child: ChoiceChip(
-                        showCheckmark: false,
-                        label: Text(status),
-                        selected: isSelected,
-                        onSelected: (_) => setState(() => _selectedStatus = status),
-                        selectedColor: Theme.of(context).colorScheme.primary,
-                        labelStyle: TextStyle(
-                          color: isSelected
-                              ? Colors.white
-                              : Theme.of(context).colorScheme.onSurface,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedStatus = status),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFF3B82F6).withOpacity(0.2) : Colors.white.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isSelected ? const Color(0xFF3B82F6).withOpacity(0.5) : Colors.white.withOpacity(0.1),
+                            ),
+                          ),
+                          child: Text(
+                            status,
+                            style: GoogleFonts.inter(
+                              color: isSelected ? const Color(0xFF60A5FA) : const Color(0xFF94A3B8),
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
                         ),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20)),
                       ),
                     );
                   }).toList(),
@@ -105,68 +116,99 @@ class _LeadsListScreenState extends ConsumerState<LeadsListScreen> {
           ),
         ),
       ),
-      body: leadsAsync.when(
-        data: (leads) {
-          var filtered = leads.where((l) {
-            final matchesStatus =
-                _selectedStatus == 'All' || l.leadStatus == _selectedStatus;
-            final matchesSearch =
-                l.businessName.toLowerCase().contains(_searchQuery) ||
-                    l.keyword.toLowerCase().contains(_searchQuery) ||
-                    l.phone.contains(_searchQuery);
-            // Owner filter by claimed member
-            final matchesMember = _filterByMember == null ||
-                l.claimedByEmail == _filterByMember;
-            return matchesStatus && matchesSearch && matchesMember;
-          }).toList();
-
-          if (filtered.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.inbox_outlined,
-                      size: 64,
-                      color: Theme.of(context).colorScheme.outlineVariant),
-                  const SizedBox(height: 12),
-                  Text('No leads found.',
-                      style: TextStyle(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant)),
-                ],
+      body: Stack(
+        children: [
+          // Background Glows
+          Positioned(
+            top: -100,
+            right: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF3B82F6).withOpacity(0.15),
               ),
-            );
-          }
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -50,
+            left: -100,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF8B5CF6).withOpacity(0.15),
+              ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+          ),
+          
+          leadsAsync.when(
+            data: (leads) {
+              var filtered = leads.where((l) {
+                final matchesStatus = _selectedStatus == 'All' || 
+                    (_selectedStatus == 'Claimed' ? l.claimedBy != null : l.leadStatus == _selectedStatus);
+                final matchesSearch =
+                    l.businessName.toLowerCase().contains(_searchQuery) ||
+                        l.keyword.toLowerCase().contains(_searchQuery) ||
+                        l.phone.contains(_searchQuery);
+                // Owner filter by claimed member
+                final matchesMember = _filterByMember == null ||
+                    l.claimedByEmail == _filterByMember;
+                return matchesStatus && matchesSearch && matchesMember;
+              }).toList();
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: filtered.length,
-            itemBuilder: (context, index) {
-              final lead = filtered[index];
-              return _LeadCard(
-                lead: lead,
-                currentUid: currentUid,
-                teamAsync: teamAsync,
-                onTap: () => context.push('/lead_details', extra: lead),
-                onClaim: () async {
-                  await ref.read(leadActionsProvider).claimLead(lead.id);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Lead claimed!'),
-                          backgroundColor: Colors.green),
-                    );
-                  }
-                },
-                onUnclaim: () async {
-                  await ref.read(leadActionsProvider).unclaimLead(lead.id);
+              if (filtered.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.inbox_outlined, size: 64, color: Color(0xFF94A3B8)),
+                      const SizedBox(height: 12),
+                      Text('No leads found.', style: GoogleFonts.inter(color: const Color(0xFF94A3B8))),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  final lead = filtered[index];
+                  return _LeadCard(
+                    lead: lead,
+                    currentUid: currentUid,
+                    teamAsync: teamAsync,
+                    onTap: () => context.push('/lead_details', extra: lead),
+                    onClaim: () async {
+                      await ref.read(leadActionsProvider).claimLead(lead.id);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Lead claimed!'), backgroundColor: Color(0xFF10B981)),
+                        );
+                      }
+                    },
+                    onUnclaim: () async {
+                      await ref.read(leadActionsProvider).unclaimLead(lead.id);
+                    },
+                  );
                 },
               );
             },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error: $e')),
+            loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF3B82F6))),
+            error: (e, st) => Center(child: Text('Error: $e', style: GoogleFonts.inter(color: const Color(0xFFEF4444)))),
+          ),
+        ],
       ),
     );
   }
@@ -190,19 +232,21 @@ class _MemberFilterButton extends StatelessWidget {
     return PopupMenuButton<String?>(
       icon: Badge(
         isLabelVisible: selectedMember != null,
-        child: const Icon(Icons.filter_list_rounded),
+        backgroundColor: const Color(0xFF3B82F6),
+        child: const Icon(Icons.filter_list_rounded, color: Colors.white),
       ),
+      color: const Color(0xFF1E293B),
       tooltip: 'Filter by member',
       initialValue: selectedMember,
       onSelected: onChanged,
       itemBuilder: (_) => [
-        const PopupMenuItem<String?>(
+        PopupMenuItem<String?>(
           value: null,
-          child: Text('Show All'),
+          child: Text('Show All', style: GoogleFonts.inter(color: Colors.white)),
         ),
         ...members.map((email) => PopupMenuItem<String?>(
               value: email,
-              child: Text(email),
+              child: Text(email, style: GoogleFonts.inter(color: Colors.white)),
             )),
       ],
     );
@@ -231,236 +275,200 @@ class _LeadCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isClaimed = lead.claimedBy != null;
-    final isMyCllaim = lead.claimedBy == currentUid;
+    final isMyClaim = lead.claimedBy == currentUid;
     final teamService = TeamService();
-    final isOwner = teamAsync.value != null &&
-        teamService.isOwner(teamAsync.value!);
-    return Card(
-      elevation: 0,
+    final isOwner = teamAsync.value != null && teamService.isOwner(teamAsync.value!);
+
+    Color statusColor;
+    if (lead.leadStatus == 'New') statusColor = const Color(0xFF3B82F6);
+    else if (lead.leadStatus == 'Contacted') statusColor = const Color(0xFFF59E0B);
+    else if (lead.leadStatus == 'Interested') statusColor = const Color(0xFF10B981);
+    else if (lead.leadStatus == 'Closed') statusColor = const Color(0xFF8B5CF6);
+    else statusColor = const Color(0xFF64748B);
+
+    return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        side: BorderSide(
-          color: isClaimed
-              ? Colors.green.withValues(alpha: 0.4)
-              : Colors.grey.withValues(alpha: 0.2),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isClaimed 
+              ? const Color(0xFF10B981).withOpacity(0.3) 
+              : Colors.white.withOpacity(0.1),
         ),
-        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Header Row ──────────────────────────────────────────────
-              Row(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
                           lead.businessName,
-                          style: const TextStyle(
-                              fontSize: 17, fontWeight: FontWeight.bold),
-                          maxLines: 1,
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: Colors.white,
+                          ),
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        if (lead.addedByEmail.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            'Added by ${lead.addedByEmail}',
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Status chip
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: _statusColor(lead.leadStatus)
-                          .withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      lead.leadStatus,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: _statusColor(lead.leadStatus),
                       ),
-                    ),
-                  ),
-                ],
-              ),
-
-              // ── Claimed Banner ───────────────────────────────────────────
-              if (isClaimed) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.verified_user_outlined,
-                          size: 14, color: Colors.green),
-                      const SizedBox(width: 4),
-                      Flexible(
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: statusColor.withOpacity(0.5)),
+                        ),
                         child: Text(
-                          isMyCllaim
-                              ? 'Claimed by you'
-                              : 'Claimed by ${lead.claimedByEmail ?? 'a member'}',
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.green),
+                          lead.leadStatus,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: statusColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.category_outlined, size: 16, color: Color(0xFF94A3B8)),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          lead.category ?? 'Uncategorized',
+                          style: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 13),
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
-
-              const SizedBox(height: 12),
-              // ── Info rows ────────────────────────────────────────────────
-              _InfoRow(Icons.phone, lead.phone),
-              const SizedBox(height: 4),
-              _InfoRow(Icons.location_on, lead.address, maxLines: 1),
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-
-              // ── Actions ──────────────────────────────────────────────────
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton.icon(
-                      onPressed: lead.phone.isEmpty
-                          ? null
-                          : () async {
-                              final uri = Uri.parse('tel:${lead.phone}');
-                              if (await canLaunchUrl(uri)) await launchUrl(uri);
-                              final teamAsync2 =
-                                  await TeamService().getUserTeams().first;
-                              if (teamAsync2.docs.isNotEmpty) {
-                                final teamId = teamAsync2.docs.first.id;
-                                TeamService().logCall(
-                                    teamId, lead.phone, lead.businessName);
-                              }
-                            },
-                      icon: const Icon(Icons.phone, size: 18),
-                      label: const Text('Call'),
+                  const SizedBox(height: 4),
+                  if (lead.rating > 0)
+                    Row(
+                      children: [
+                        const Icon(Icons.star, size: 16, color: Color(0xFFF59E0B)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${lead.rating} (${lead.reviewCount} reviews)',
+                          style: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 13),
+                        ),
+                      ],
                     ),
-                  ),
-                  Container(
-                      width: 1, height: 24, color: Colors.grey.shade300),
-                  Expanded(
-                    child: TextButton.icon(
-                      onPressed: lead.website.isEmpty
-                          ? null
-                          : () async {
-                              final raw = lead.website.startsWith('http')
-                                  ? lead.website
-                                  : 'https://${lead.website}';
-                              final uri = Uri.parse(raw);
-                              if (await canLaunchUrl(uri)) await launchUrl(uri);
-                            },
-                      icon: const Icon(Icons.language, size: 18),
-                      label: const Text('Website'),
+                  const SizedBox(height: 16),
+                  
+                  // Team Claim Info (if in a team and claimed)
+                  if (teamAsync.value != null && isClaimed)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isMyClaim ? const Color(0xFF10B981).withOpacity(0.1) : const Color(0xFF3B82F6).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isMyClaim ? const Color(0xFF10B981).withOpacity(0.3) : const Color(0xFF3B82F6).withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.person,
+                            size: 16,
+                            color: isMyClaim ? const Color(0xFF10B981) : const Color(0xFF60A5FA),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              isMyClaim ? 'Claimed by you' : 'Claimed by ${lead.claimedByEmail ?? 'Member'}',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: isMyClaim ? const Color(0xFF10B981) : const Color(0xFF60A5FA),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Container(
-                      width: 1, height: 24, color: Colors.grey.shade300),
-                  // Claim button
-                  Expanded(
-                    child: _buildClaimButton(isOwner, isClaimed, isMyCllaim),
+
+                  Row(
+                    children: [
+                      if (lead.phone.isNotEmpty)
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => launchUrl(Uri.parse('tel:${lead.phone}')),
+                            icon: const Icon(Icons.phone, size: 18, color: Colors.white),
+                            label: Text('Call', style: GoogleFonts.inter(color: Colors.white)),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      if (teamAsync.value != null) ...[
+                        if (lead.phone.isNotEmpty) const SizedBox(width: 8),
+                        Expanded(
+                          child: isClaimed
+                              ? (isMyClaim || isOwner)
+                                  ? OutlinedButton(
+                                      onPressed: onUnclaim,
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: const Color(0xFFEF4444),
+                                        side: BorderSide(color: const Color(0xFFEF4444).withOpacity(0.5)),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                      ),
+                                      child: Text('Unclaim', style: GoogleFonts.inter()),
+                                    )
+                                  : OutlinedButton(
+                                      onPressed: null,
+                                      style: OutlinedButton.styleFrom(
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                      ),
+                                      child: Text('Claimed', style: GoogleFonts.inter()),
+                                    )
+                              : FilledButton(
+                                  onPressed: onClaim,
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFF3B82F6),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                  child: Text('Claim Lead', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white)),
+                                ),
+                        ),
+                      ]
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildClaimButton(bool isOwner, bool isClaimed, bool isMyCllaim) {
-    if (!isClaimed) {
-      return TextButton.icon(
-        onPressed: onClaim,
-        icon: const Icon(Icons.bookmark_add_outlined, size: 18),
-        label: const Text('Claim'),
-      );
-    }
-    if (isMyCllaim || isOwner) {
-      return TextButton.icon(
-        onPressed: onUnclaim,
-        style: TextButton.styleFrom(foregroundColor: Colors.red),
-        icon: const Icon(Icons.bookmark_remove_outlined, size: 18),
-        label: const Text('Unclaim'),
-      );
-    }
-    // Claimed by someone else, can't claim
-    return TextButton.icon(
-      onPressed: null,
-      icon: const Icon(Icons.bookmark_outlined, size: 18),
-      label: const Text('Claimed'),
-    );
-  }
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'New':
-        return Colors.blue;
-      case 'Contacted':
-        return Colors.orange;
-      case 'Interested':
-        return Colors.purple;
-      case 'Closed':
-        return Colors.green;
-      case 'Not Interested':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow(this.icon, this.text, {this.maxLines});
-  final IconData icon;
-  final String text;
-  final int? maxLines;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Colors.grey.shade500),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(color: Colors.grey.shade600),
-            maxLines: maxLines,
-            overflow: maxLines != null ? TextOverflow.ellipsis : null,
-          ),
-        ),
-      ],
     );
   }
 }
