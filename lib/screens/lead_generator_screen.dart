@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/history_provider.dart';
 import '../providers/scraper_provider.dart';
+import '../providers/activation_provider.dart';
 import '../services/scraper/scraper_engine.dart';
+import '../screens/lock_screen.dart';
 
 class LeadGeneratorScreen extends ConsumerStatefulWidget {
   const LeadGeneratorScreen({super.key});
@@ -99,6 +101,7 @@ class _LeadGeneratorScreenState extends ConsumerState<LeadGeneratorScreen> {
   @override
   Widget build(BuildContext context) {
     final scraperStatus = ref.watch(scraperStatusProvider);
+    final accessAsync = ref.watch(appAccessProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -154,17 +157,20 @@ class _LeadGeneratorScreenState extends ConsumerState<LeadGeneratorScreen> {
 
           // Content
           SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Hero(
-                    tag: 'generator_title',
-                    child: Material(
-                      color: Colors.transparent,
-                      child: Text(
-                        'Find Leads',
+            child: accessAsync.when(
+              data: (hasAccess) {
+                if (!hasAccess) return const LockScreenWidget();
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Hero(
+                        tag: 'generator_title',
+                        child: Material(
+                          color: Colors.transparent,
+                          child: Text(
+                            'Find Leads',
                         style: GoogleFonts.outfit(
                           fontSize: 36,
                           fontWeight: FontWeight.w800,
@@ -190,12 +196,15 @@ class _LeadGeneratorScreenState extends ConsumerState<LeadGeneratorScreen> {
                   const SizedBox(height: 32),
 
                   if (_isLoading) _buildProgressCard(scraperStatus),
-                  if (_lastGeneratedCount != null && !_isLoading)
-                    _buildSuccessCard(),
-                ],
-              ),
-            ),
-          ),
+                    if (_lastGeneratedCount != null && !_isLoading)
+                      _buildSuccessCard(),
+                  ],
+                ),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF3B82F6))),
+            error: (_, __) => const SizedBox.shrink(),
+          )),
         ],
       ),
     );

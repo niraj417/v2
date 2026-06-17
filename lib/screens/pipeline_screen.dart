@@ -5,6 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../models/lead_model.dart';
 import '../providers/lead_provider.dart';
+import '../providers/activation_provider.dart';
+import '../screens/lock_screen.dart';
+import '../services/team_service.dart';
 
 class PipelineScreen extends ConsumerStatefulWidget {
   const PipelineScreen({super.key});
@@ -19,6 +22,7 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
   @override
   Widget build(BuildContext context) {
     final leadsState = ref.watch(leadListProvider);
+    final accessAsync = ref.watch(appAccessProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
@@ -49,8 +53,11 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
             ),
           ),
           SafeArea(
-            child: leadsState.when(
-              data: (leads) {
+            child: accessAsync.when(
+              data: (hasAccess) {
+                if (!hasAccess) return const LockScreenWidget();
+                return leadsState.when(
+                  data: (leads) {
                 return ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -63,8 +70,12 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
                   },
                 );
               },
+                  loading: () => const Center(child: CircularProgressIndicator(color: Colors.white)),
+                  error: (e, st) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.white))),
+                );
+              },
               loading: () => const Center(child: CircularProgressIndicator(color: Colors.white)),
-              error: (e, st) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.white))),
+              error: (_, __) => const SizedBox.shrink(),
             ),
           ),
         ],
@@ -86,6 +97,9 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
           final lead = details.data;
           if (lead.leadStatus != stage) {
             ref.read(leadActionsProvider).updateLeadStatus(lead.id, stage);
+            if (lead.teamId != null && lead.teamId!.isNotEmpty) {
+              TeamService().logActivity(lead.teamId!, lead.businessName, 'Status Update: $stage', leadPhone: lead.phone);
+            }
           }
         },
         builder: (context, candidateData, rejectedData) {
@@ -173,7 +187,7 @@ class _PipelineScreenState extends ConsumerState<PipelineScreen> {
       ),
       child: InkWell(
         onTap: () {
-          context.push('/lead_details', extra: lead);
+          GoRouter.of(context).push('/lead_details', extra: lead);
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(

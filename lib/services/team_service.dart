@@ -34,6 +34,7 @@ class TeamService {
       'ownerEmail': currentUser!.email,
       'members': [currentUser!.email],
       'memberUids': [currentUser!.uid],
+      'pendingInvites': [],
       'createdAt': FieldValue.serverTimestamp(),
     });
 
@@ -41,9 +42,11 @@ class TeamService {
   }
 
   Stream<QuerySnapshot> getUserTeams() {
+    final uid = currentUser?.uid;
+    if (uid == null) return const Stream.empty();
     return _db
         .collection('teams')
-        .where('members', arrayContains: currentUser?.email)
+        .where('memberUids', arrayContains: uid)
         .snapshots();
   }
 
@@ -66,14 +69,29 @@ class TeamService {
 
     final targetUid = userSnap.docs.first.id;
 
-    // Prevent inviting if already in team
+    // Prevent inviting if already in team or if team is full
     final teamDoc = await _db.collection('teams').doc(teamId).get();
     if (teamDoc.exists) {
       final members = List<String>.from(teamDoc.data()?['members'] ?? []);
+      final pendingInvites = List<String>.from(teamDoc.data()?['pendingInvites'] ?? []);
+      
       if (members.contains(email)) {
         throw Exception('User is already in this team.');
       }
+      if (pendingInvites.contains(email)) {
+        throw Exception('An invite has already been sent to this user.');
+      }
+      
+      // Enforce 3 team members limit (owner is included in members list, so total members = 4)
+      if (members.length + pendingInvites.length >= 4) {
+        throw Exception('Maximum team limit reached. Only 3 team members are allowed (this includes pending invites).');
+      }
     }
+
+    // Add to pendingInvites in team document
+    await _db.collection('teams').doc(teamId).update({
+      'pendingInvites': FieldValue.arrayUnion([email]),
+    });
 
     // Create invite notification
     await _db
@@ -97,11 +115,12 @@ class TeamService {
 
     final batch = _db.batch();
 
-    // 1. Add user to team
+    // 1. Add user to team and remove from pending invites
     final teamRef = _db.collection('teams').doc(teamId);
     batch.update(teamRef, {
       'members': FieldValue.arrayUnion([email]),
       'memberUids': FieldValue.arrayUnion([uid]),
+      'pendingInvites': FieldValue.arrayRemove([email]),
     });
 
     // 2. Delete the notification
@@ -132,12 +151,42 @@ class TeamService {
 
   Future<void> declineInvite(String notificationId) async {
     if (currentUser == null) return;
-    await _db
+    final notifRef = _db
         .collection('users')
         .doc(currentUser!.uid)
         .collection('notifications')
-        .doc(notificationId)
-        .delete();
+        .doc(notificationId);
+        
+    final snap = await notifRef.get();
+    if (snap.exists) {
+      final teamId = snap.data()?['teamId'];
+      if (teamId != null) {
+        await _db.collection('teams').doc(teamId).update({
+          'pendingInvites': FieldValue.arrayRemove([currentUser!.email])
+        });
+      }
+    }
+
+    await notifRef.delete();
+  }
+
+  Future<void> leaveTeam(String teamId) async {
+    if (currentUser == null) return;
+    final uid = currentUser!.uid;
+    final email = currentUser!.email!;
+
+    // Check if the user is the owner
+    final teamDoc = await _db.collection('teams').doc(teamId).get();
+    if (teamDoc.exists && teamDoc.data()?['ownerId'] == uid) {
+      throw Exception('Team owner cannot leave the team. You must delete the team instead.');
+    }
+
+    // Remove user from team
+    final teamRef = _db.collection('teams').doc(teamId);
+    await teamRef.update({
+      'members': FieldValue.arrayRemove([email]),
+      'memberUids': FieldValue.arrayRemove([uid]),
+    });
   }
 
   Stream<QuerySnapshot> getNotifications() {
@@ -162,30 +211,31 @@ class TeamService {
     return List<String>.from(teamData['members'] ?? []);
   }
 
-  // ─── Call Logs ───────────────────────────────────────────────────────────
+  // ─── Activity Logs ───────────────────────────────────────────────────────────
 
-  Future<void> logCall(
-      String teamId, String leadPhone, String leadName) async {
+  Future<void> logActivity(
+      String teamId, String leadName, String action, {String? leadPhone}) async {
     if (currentUser == null) return;
 
     await _db
         .collection('teams')
         .doc(teamId)
-        .collection('call_logs')
+        .collection('activity_logs')
         .add({
       'callerEmail': currentUser!.email,
       'callerUid': currentUser!.uid,
-      'leadPhone': leadPhone,
+      'leadPhone': leadPhone ?? '',
       'leadName': leadName,
+      'action': action,
       'timestamp': FieldValue.serverTimestamp(),
     });
   }
 
-  Stream<QuerySnapshot> getTeamCallLogs(String teamId) {
+  Stream<QuerySnapshot> getTeamActivityLogs(String teamId) {
     return _db
         .collection('teams')
         .doc(teamId)
-        .collection('call_logs')
+        .collection('activity_logs')
         .orderBy('timestamp', descending: true)
         .snapshots();
   }

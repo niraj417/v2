@@ -46,31 +46,45 @@ class FirebaseLeadService {
 
   // ─── Streams ──────────────────────────────────────────────────────────────
 
+  /// Maximum number of leads fetched in one stream snapshot.
+  /// Keeps memory usage and initial parse time bounded even for large teams.
+  static const int _pageSize = 500;
+
   /// Streams leads belonging to the team. Filters based on role.
-  Stream<List<Lead>> streamTeamLeads(String teamId, {required bool isOwner, required String uid}) {
+  /// Only the most recent [_pageSize] leads are fetched at once.
+  Stream<List<Lead>> streamTeamLeads(
+    String teamId, {
+    required bool isOwner,
+    required String uid,
+  }) {
     return _leads
         .where('teamId', isEqualTo: teamId)
         .orderBy('createdAt', descending: true)
-        .snapshots()
+        .limit(_pageSize)
+        .snapshots(includeMetadataChanges: false)
         .map((snap) {
           final allDocs = snap.docs.map(Lead.fromFirestore).toList();
           if (isOwner) {
-            // Owner sees every lead in the team
             return allDocs;
           } else {
             // Members see unclaimed leads OR leads they personally claimed
-            return allDocs.where((l) => l.claimedBy == null || l.claimedBy == uid).toList();
+            return allDocs.where((l) {
+              final claimer = l.claimedBy?.trim();
+              return claimer == null || claimer.isEmpty || claimer == uid;
+            }).toList();
           }
         });
   }
 
   /// Streams only the current user's own leads (for solo / non-team users).
+  /// Only the most recent [_pageSize] leads are fetched at once.
   Stream<List<Lead>> streamMyLeads() {
     if (_user == null) return const Stream.empty();
     return _leads
         .where('addedBy', isEqualTo: _user!.uid)
         .orderBy('createdAt', descending: true)
-        .snapshots()
+        .limit(_pageSize)
+        .snapshots(includeMetadataChanges: false)
         .map((snap) => snap.docs.map(Lead.fromFirestore).toList());
   }
 

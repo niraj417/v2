@@ -2,22 +2,29 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/team_service.dart';
+import '../services/team_report_service.dart';
+import '../services/export_service.dart';
+import '../providers/activation_provider.dart';
+import '../screens/lock_screen.dart';
 
-class TeamManagementScreen extends StatefulWidget {
+class TeamManagementScreen extends ConsumerStatefulWidget {
   const TeamManagementScreen({super.key});
 
   @override
-  State<TeamManagementScreen> createState() => _TeamManagementScreenState();
+  ConsumerState<TeamManagementScreen> createState() => _TeamManagementScreenState();
 }
 
-class _TeamManagementScreenState extends State<TeamManagementScreen> {
+class _TeamManagementScreenState extends ConsumerState<TeamManagementScreen> {
   final TeamService _teamService = TeamService();
   String? _selectedTeamId;
   String? _teamName;
 
   @override
   Widget build(BuildContext context) {
+    final accessAsync = ref.watch(appAccessProvider);
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
@@ -28,44 +35,41 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
       ),
       body: Stack(
         children: [
-          // Background Glows
+          // Ambient Glow Top Left
           Positioned(
             top: -100,
             left: -100,
             child: Container(
               width: 300,
               height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF3B82F6).withOpacity(0.15),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
-                child: Container(color: Colors.transparent),
-              ),
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF3B82F6)),
             ),
           ),
+          // Ambient Glow Bottom Right
           Positioned(
             bottom: -50,
             right: -100,
             child: Container(
               width: 250,
               height: 250,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF8B5CF6).withOpacity(0.15),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
-                child: Container(color: Colors.transparent),
-              ),
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF8B5CF6)),
+            ),
+          ),
+          // Blur overlay
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+              child: Container(color: Colors.transparent),
             ),
           ),
 
           // Main Content
-          StreamBuilder<QuerySnapshot>(
-            stream: _teamService.getUserTeams(),
-            builder: (context, snapshot) {
+          accessAsync.when(
+            data: (hasAccess) {
+              if (!hasAccess) return const SafeArea(child: LockScreenWidget());
+              return StreamBuilder<QuerySnapshot>(
+                stream: _teamService.getUserTeams(),
+                builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator(color: Color(0xFF3B82F6)));
               }
@@ -78,14 +82,20 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                 return _buildNoTeamView();
               }
 
-              // User belongs to at least one team, default to first
               final teamDoc = teams.first;
+              final teamData = teamDoc.data() as Map<String, dynamic>;
               _selectedTeamId = teamDoc.id;
-              _teamName = teamDoc['name'];
-              final members = List<String>.from(teamDoc['members'] ?? []);
+              _teamName = teamData['name'];
+              final members = List<String>.from(teamData['members'] ?? []);
+              final pendingInvites = List<String>.from(teamData['pendingInvites'] ?? []);
+              final isOwner = _teamService.isOwner(teamData);
 
-              return _buildTeamDashboard(members);
+              return _buildTeamDashboard(members, pendingInvites, isOwner);
+                },
+              );
             },
+            loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF3B82F6))),
+            error: (_, __) => const SizedBox.shrink(),
           ),
         ],
       ),
@@ -189,7 +199,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
     );
   }
 
-  Widget _buildTeamDashboard(List<String> members) {
+  Widget _buildTeamDashboard(List<String> members, List<String> pendingInvites, bool isOwner) {
     return Column(
       children: [
         // Team Header
@@ -225,15 +235,48 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                   ],
                 ),
               ),
-              OutlinedButton.icon(
-                onPressed: _showAddMemberDialog,
-                icon: const Icon(Icons.person_add_rounded, size: 18),
-                label: Text('Invite', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: BorderSide(color: Colors.white.withOpacity(0.2)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.file_download_rounded, color: Color(0xFF10B981)),
+                    style: IconButton.styleFrom(backgroundColor: const Color(0xFF10B981).withOpacity(0.1)),
+                    onPressed: _showExportOptions,
+                    tooltip: 'Export Report',
+                  ),
+                  const SizedBox(width: 8),
+                  if (isOwner)
+                    OutlinedButton.icon(
+                      onPressed: (members.length + pendingInvites.length) >= 4 
+                          ? () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Maximum team limit reached (includes pending invites). Only 3 team members allowed.'),
+                                  backgroundColor: Color(0xFFEF4444),
+                                ),
+                              );
+                            }
+                          : _showAddMemberDialog,
+                      icon: const Icon(Icons.person_add_rounded, size: 18),
+                      label: Text('Invite', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    )
+                  else
+                    OutlinedButton.icon(
+                      onPressed: () => _showLeaveTeamDialog(context),
+                      icon: const Icon(Icons.exit_to_app_rounded, size: 18),
+                      label: Text('Leave', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFEF4444),
+                        side: BorderSide(color: const Color(0xFFEF4444).withOpacity(0.5)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
@@ -322,7 +365,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                                   const Icon(Icons.history_rounded, color: Color(0xFFF59E0B), size: 20),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Recent Call Logs',
+                                    'Recent Activity Log',
                                     style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                                   ),
                                 ],
@@ -331,7 +374,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                             const Divider(height: 1, color: Colors.white24),
                             Expanded(
                               child: StreamBuilder<QuerySnapshot>(
-                                stream: _teamService.getTeamCallLogs(_selectedTeamId!),
+                                stream: _teamService.getTeamActivityLogs(_selectedTeamId!),
                                 builder: (context, snapshot) {
                                   if (snapshot.connectionState == ConnectionState.waiting) {
                                     return const Center(child: CircularProgressIndicator(color: Color(0xFF3B82F6)));
@@ -363,7 +406,29 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                                       final lead = data['leadName'];
                                       final time = (data['timestamp'] as Timestamp?)?.toDate();
                                       final timeStr = time != null ? '${time.hour}:${time.minute.toString().padLeft(2, '0')} - ${time.day}/${time.month}' : '';
+                                      final action = data['action'] as String? ?? 'Call';
                                       
+                                      IconData iconData = Icons.call_made_rounded;
+                                      Color iconColor = const Color(0xFF10B981);
+                                      if (action == 'Claim') {
+                                        iconData = Icons.person_add_alt_1_rounded;
+                                        iconColor = const Color(0xFF3B82F6);
+                                      } else if (action == 'Unclaim') {
+                                        iconData = Icons.person_remove_alt_1_rounded;
+                                        iconColor = const Color(0xFFEF4444);
+                                      } else if (action.startsWith('Status Update:')) {
+                                        iconData = Icons.swap_horiz_rounded;
+                                        iconColor = const Color(0xFFF59E0B);
+                                      }
+
+                                      String actionText = ' called ';
+                                      if (action == 'Claim') actionText = ' claimed ';
+                                      else if (action == 'Unclaim') actionText = ' unclaimed ';
+                                      else if (action.startsWith('Status Update:')) {
+                                        final status = action.split(': ').last;
+                                        actionText = ' marked $status for ';
+                                      }
+
                                       return Container(
                                         padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
@@ -375,10 +440,10 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                                             Container(
                                               padding: const EdgeInsets.all(8),
                                               decoration: BoxDecoration(
-                                                color: const Color(0xFF10B981).withOpacity(0.2),
+                                                color: iconColor.withOpacity(0.2),
                                                 shape: BoxShape.circle,
                                               ),
-                                              child: const Icon(Icons.call_made_rounded, color: Color(0xFF10B981), size: 16),
+                                              child: Icon(iconData, color: iconColor, size: 16),
                                             ),
                                             const SizedBox(width: 12),
                                             Expanded(
@@ -390,7 +455,7 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                                                       style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
                                                       children: [
                                                         TextSpan(text: caller, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                                        const TextSpan(text: ' called '),
+                                                        TextSpan(text: actionText),
                                                         TextSpan(text: lead, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF60A5FA))),
                                                       ],
                                                     ),
@@ -415,12 +480,105 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                // Export Button
+                FilledButton.icon(
+                  onPressed: _showExportOptions,
+                  icon: const Icon(Icons.download_rounded, size: 18),
+                  label: Text('Export Team Report', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF3B82F6),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
         ),
       ],
     );
+  }
+
+  // ─── Export Logic ─────────────────────────────────────────────────────────
+
+  void _showExportOptions() {
+    if (_selectedTeamId == null) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E293B),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Export Team Report', style: GoogleFonts.outfit(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              _buildExportOption('Today', Icons.today_rounded),
+              const SizedBox(height: 12),
+              _buildExportOption('This Week', Icons.view_week_rounded),
+              const SizedBox(height: 12),
+              _buildExportOption('This Month', Icons.calendar_month_rounded),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildExportOption(String label, IconData icon) {
+    return FilledButton.icon(
+      style: FilledButton.styleFrom(
+        backgroundColor: const Color(0xFF3B82F6).withOpacity(0.2),
+        foregroundColor: const Color(0xFF60A5FA),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: const Color(0xFF3B82F6).withOpacity(0.5))),
+      ),
+      icon: Icon(icon),
+      label: Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+      onPressed: () {
+        Navigator.pop(context);
+        _handleExport(label);
+      },
+    );
+  }
+
+  bool _isExporting = false;
+  Future<void> _handleExport(String timeFilter) async {
+    if (_selectedTeamId == null || _isExporting) return;
+    setState(() => _isExporting = true);
+    
+    // Show loading
+    showDialog(
+      context: context, 
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFF3B82F6)))
+    );
+
+    try {
+      final stats = await TeamReportService().generateStats(_selectedTeamId!, timeFilter);
+      final path = await ExportService().exportTeamReportToCsv(stats, timeFilter);
+      
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        if (path != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Report saved to $path'), backgroundColor: const Color(0xFF10B981)));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export failed or permission denied'), backgroundColor: Color(0xFFEF4444)));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: const Color(0xFFEF4444)));
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
   }
 
   void _showAddMemberDialog() {
@@ -493,6 +651,54 @@ class _TeamManagementScreenState extends State<TeamManagementScreen> {
           ),
         ],
       )
+    );
+  }
+
+  void _showLeaveTeamDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Leave Team', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text(
+          'Are you sure you want to leave this team? You will lose access to team leads and your app may lock until you activate it yourself.',
+          style: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Cancel', style: GoogleFonts.inter(color: const Color(0xFF94A3B8))),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              if (_selectedTeamId != null) {
+                try {
+                  await _teamService.leaveTeam(_selectedTeamId!);
+                  if (dialogContext.mounted) {
+                    Navigator.pop(dialogContext); // Close dialog
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(content: Text('Successfully left the team.'), backgroundColor: Color(0xFF10B981)),
+                    );
+                  }
+                } catch (e) {
+                  if (dialogContext.mounted) {
+                    Navigator.pop(dialogContext); // Close dialog immediately on error or we might lock up UI
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: const Color(0xFFEF4444)),
+                    );
+                  }
+                }
+              }
+            },
+            child: Text('Leave', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 }

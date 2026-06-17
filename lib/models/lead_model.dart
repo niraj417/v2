@@ -16,6 +16,7 @@ class Lead {
   final String location;
   final String leadStatus; // New, Contacted, Interested, Not Interested, Closed
   final DateTime createdAt;
+  final DateTime updatedAt;
 
   // Team & Firebase fields
   final String? teamId;        // Team this lead belongs to (null if solo user)
@@ -40,6 +41,7 @@ class Lead {
     required this.location,
     required this.leadStatus,
     required this.createdAt,
+    required this.updatedAt,
     this.teamId,
     required this.addedBy,
     required this.addedByEmail,
@@ -64,6 +66,7 @@ class Lead {
       'location': location,
       'lead_status': leadStatus,
       'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 
@@ -85,6 +88,7 @@ class Lead {
       'location': location,
       'leadStatus': leadStatus,
       'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
       'teamId': teamId,
       'addedBy': addedBy,
       'addedByEmail': addedByEmail,
@@ -110,6 +114,7 @@ class Lead {
       location: map['location'] ?? '',
       leadStatus: map['lead_status'] ?? 'New',
       createdAt: DateTime.parse(map['created_at'] as String),
+      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at'] as String) : DateTime.parse(map['created_at'] as String),
       addedBy: map['addedBy'] ?? '',
       addedByEmail: map['addedByEmail'] ?? '',
       teamId: map['teamId'],
@@ -137,6 +142,7 @@ class Lead {
       location: map['location'] ?? '',
       leadStatus: map['leadStatus'] ?? 'New',
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       teamId: map['teamId'],
       addedBy: map['addedBy'] ?? '',
       addedByEmail: map['addedByEmail'] ?? '',
@@ -161,6 +167,7 @@ class Lead {
     String? location,
     String? leadStatus,
     DateTime? createdAt,
+    DateTime? updatedAt,
     Object? teamId = _sentinel,
     String? addedBy,
     String? addedByEmail,
@@ -183,6 +190,7 @@ class Lead {
       location: location ?? this.location,
       leadStatus: leadStatus ?? this.leadStatus,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       teamId: teamId == _sentinel ? this.teamId : teamId as String?,
       addedBy: addedBy ?? this.addedBy,
       addedByEmail: addedByEmail ?? this.addedByEmail,

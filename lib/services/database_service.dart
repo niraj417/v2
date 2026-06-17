@@ -49,7 +49,8 @@ class DatabaseService {
         keyword TEXT,
         location TEXT,
         lead_status TEXT NOT NULL,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
       )
     ''');
 
@@ -123,7 +124,10 @@ class DatabaseService {
     final db = await instance.database;
     await db.update(
       'leads',
-      {'lead_status': status},
+      {
+        'lead_status': status,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
       where: 'id = ?',
       whereArgs: [id],
     );

@@ -71,4 +71,62 @@ class ExportService {
       return null;
     }
   }
+
+  Future<String?> exportTeamReportToCsv(List<dynamic> stats, String timeframe) async {
+    try {
+      if (stats.isEmpty) return null;
+
+      // Request permission
+      var status = await Permission.manageExternalStorage.request();
+      if (!status.isGranted) {
+        status = await Permission.storage.request();
+        if (!status.isGranted) {
+          return null;
+        }
+      }
+
+      List<List<dynamic>> rows = [];
+      
+      // Header exactly as requested
+      rows.add([
+        "Team Members",
+        "Leads Claimed",
+        "Leads Contacted",
+        "Leads Interested",
+        "Closed",
+        "Not Interested",
+        "Leads Generated"
+      ]);
+
+      // Data
+      for (var userStat in stats) {
+        rows.add([
+          userStat.email,
+          userStat.leadsClaimed.toString(),
+          userStat.leadsContacted.toString(),
+          userStat.leadsInterested.toString(),
+          userStat.leadsClosed.toString(),
+          userStat.leadsNotInterested.toString(),
+          userStat.leadsGenerated.toString(),
+        ]);
+      }
+
+      String csv = rows.map((row) => row.map((e) => '"${e.toString().replaceAll('"', '""')}"').join(',')).join('\n');
+      
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      
+      // Save directly to folder
+      final directory = Directory('/storage/emulated/0/Exported Leads');
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
+      
+      final file = File('${directory.path}/team_report_${timeframe.toLowerCase()}_$timestamp.csv');
+      await file.writeAsString(csv);
+      
+      return file.path;
+    } catch (_) {
+      return null;
+    }
+  }
 }

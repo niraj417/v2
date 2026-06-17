@@ -28,7 +28,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
       await TeamService().initializeUserProfile();
       if (mounted) {
-        context.go('/');
+        GoRouter.of(context).go('/');
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
@@ -62,7 +62,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await FirebaseAuth.instance.signInWithCredential(credential);
       await TeamService().initializeUserProfile();
       if (mounted) {
-        context.go('/');
+        GoRouter.of(context).go('/');
       }
     } catch (e) {
       if (mounted) {
@@ -237,7 +237,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               children: [
                                 const Text("Don't have an account?", style: TextStyle(color: Colors.white70)),
                                 TextButton(
-                                  onPressed: () => context.go('/signup'), // Used go() instead of push() to avoid stacking
+                                  onPressed: () => GoRouter.of(context).go('/signup'), // Used go() instead of push() to avoid stacking
                                   child: const Text('Sign Up', style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
                                 ),
                               ],

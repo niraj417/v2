@@ -13,6 +13,9 @@ import '../services/firebase_lead_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/activation_service.dart';
+import '../providers/activation_provider.dart';
+import 'templates_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -199,7 +202,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   iconColor: const Color(0xFF2DD4BF),
                   title: 'Team Management', 
                   subtitle: 'Invite members and view team activity.',
-                  onTap: () => context.push('/team_management'),
+                  onTap: () => GoRouter.of(context).push('/team_management'),
+                ),
+                _buildTile(
+                  icon: Icons.message_rounded, 
+                  iconColor: const Color(0xFF3B82F6),
+                  title: 'Message Templates', 
+                  subtitle: 'Create and manage WhatsApp & SMS templates.',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const TemplatesScreen()),
+                    );
+                  },
                 ),
                 _buildTile(
                   icon: Icons.logout, 
@@ -213,6 +228,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     router.go('/login');
                   },
                 ),
+                const SizedBox(height: 32),
+                
+                _buildSectionHeader('Activation'),
+                const SizedBox(height: 12),
+                _buildActivationSection(),
+                
+                const SizedBox(height: 32),
+                if (FirebaseAuth.instance.currentUser?.email == 'kingniraj417@gmail.com') ...[
+                  _buildSectionHeader('Admin (Setup Only)'),
+                  const SizedBox(height: 12),
+                  _buildTile(
+                    icon: Icons.admin_panel_settings,
+                    iconColor: const Color(0xFFF59E0B),
+                    title: 'Generate 10k Activation Keys',
+                    subtitle: 'Populate the Firestore database with new keys.',
+                    onTap: () => _confirmGenerateKeys(context),
+                  ),
+                ],
+                
                 const SizedBox(height: 48),
               ],
             ),
@@ -480,6 +514,182 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Navigator.pop(context);
             },
             child: Text('Save', style: GoogleFonts.inter(color: const Color(0xFF3B82F6), fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivationSection() {
+    final accessAsync = ref.watch(appAccessProvider);
+
+    return accessAsync.when(
+      data: (hasAccess) {
+        if (hasAccess) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF10B981).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Color(0xFF10B981)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'App is Activated',
+                    style: GoogleFonts.inter(color: const Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+              ],
+            ),
+          );
+        } else {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEF4444).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.lock_outline, color: Color(0xFFEF4444)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Unlock Full Access',
+                        style: GoogleFonts.inter(color: const Color(0xFFEF4444), fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Enter your activation code. If you join a team that is already activated, you will inherit their access.',
+                  style: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 13),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => _showActivationDialog(context),
+                    icon: const Icon(Icons.key),
+                    label: Text('Enter Activation Code', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4444),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  void _showActivationDialog(BuildContext context) {
+    final controller = TextEditingController();
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1E293B),
+            title: Text('Activation Code', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 16.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                TextField(
+                  controller: controller,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: '15-Character Code',
+                    labelStyle: TextStyle(color: Color(0xFF94A3B8)),
+                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF64748B))),
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF3B82F6))),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: isLoading ? null : () => Navigator.pop(context),
+                child: Text('Cancel', style: GoogleFonts.inter(color: const Color(0xFF94A3B8))),
+              ),
+              FilledButton(
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        setState(() => isLoading = true);
+                        try {
+                          await ActivationService.instance.claimCode(controller.text);
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Successfully activated!'), backgroundColor: Color(0xFF10B981)),
+                            );
+                          }
+                        } catch (e) {
+                          setState(() => isLoading = false);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: const Color(0xFFEF4444)),
+                            );
+                          }
+                        }
+                      },
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF3B82F6)),
+                child: Text('Activate', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _confirmGenerateKeys(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: Text('Generate 10k Keys?', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text('This will insert 10,000 unique activation keys into Firestore. This operation might take a moment.', style: GoogleFonts.inter(color: const Color(0xFF94A3B8))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: GoogleFonts.inter(color: const Color(0xFF94A3B8)))),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFF59E0B)),
+            onPressed: () async {
+              Navigator.pop(context);
+              final sm = ScaffoldMessenger.of(context);
+              sm.showSnackBar(const SnackBar(content: Text('Generating keys in background...')));
+              try {
+                await ActivationService.instance.generateAdminKeys();
+                sm.showSnackBar(const SnackBar(content: Text('Generated 10,000 keys successfully!'), backgroundColor: Color(0xFF10B981)));
+              } catch (e) {
+                sm.showSnackBar(SnackBar(content: Text('Failed: $e'), backgroundColor: const Color(0xFFEF4444)));
+              }
+            },
+            child: Text('Generate', style: GoogleFonts.inter(color: Colors.white)),
           ),
         ],
       ),

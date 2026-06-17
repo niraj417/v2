@@ -36,6 +36,7 @@ class LeadGeneratorService {
         location: location,
         leadStatus: 'New',
         createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
         addedBy: FirebaseAuth.instance.currentUser?.uid ?? '',
         addedByEmail: FirebaseAuth.instance.currentUser?.email ?? '',
       );

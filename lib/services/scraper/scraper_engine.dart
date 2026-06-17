@@ -92,6 +92,11 @@ class ScraperEngine {
           if (_isCancelled) throw Exception('Cancelled by user');
           final lead = LeadFormatter.format(data, keyword, location);
 
+          // Discard leads that have neither phone nor website
+          if (lead.phone.trim().isEmpty && lead.website.trim().isEmpty) {
+            continue;
+          }
+
           if (_duplicateFilter.isNew(lead.id)) {
             try {
               await FirebaseLeadService.instance.addLead(lead, teamId: _teamId);
@@ -184,6 +189,11 @@ class ScraperEngine {
       int imported = 0;
       for (var lead in leads) {
         if (_isCancelled) break;
+        // Discard leads that have neither phone nor website
+        if (lead.phone.trim().isEmpty && lead.website.trim().isEmpty) {
+          continue;
+        }
+
         // Skip in-dataset duplicates (same placeId appearing twice in results)
         if (!_duplicateFilter.isNew(lead.id)) continue;
         try {

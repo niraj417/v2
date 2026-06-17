@@ -80,6 +80,7 @@ class LeadFormatter {
       location: location,
       leadStatus: 'New',
       createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
       // addedBy & addedByEmail will be set by FirebaseLeadService when saved
       addedBy: '',
       addedByEmail: '',

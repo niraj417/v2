@@ -4,6 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/history_provider.dart';
+import 'package:go_router/go_router.dart';
+
+import '../providers/activation_provider.dart';
+import 'lock_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -12,6 +16,7 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(dashboardStatsProvider);
     final historyState = ref.watch(historyProvider);
+    final accessAsync = ref.watch(appAccessProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -22,7 +27,10 @@ class DashboardScreen extends ConsumerWidget {
         elevation: 0,
         actions: [
           IconButton(icon: const Icon(Icons.search, color: Colors.white), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.notifications_outlined, color: Colors.white), onPressed: () => context.push('/notifications')),
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+            onPressed: () => GoRouter.of(context).push('/notifications'),
+          ),
         ],
       ),
       body: Stack(
@@ -55,57 +63,65 @@ class DashboardScreen extends ConsumerWidget {
             ),
           ),
           
-          SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Overview',
-                          style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+          accessAsync.when(
+            data: (hasAccess) {
+              if (!hasAccess) return const SafeArea(child: LockScreenWidget());
+              
+              return SafeArea(
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Overview',
+                              style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            const SizedBox(height: 24),
+                            _buildStatCards(context, stats),
+                            const SizedBox(height: 48),
+                            Text(
+                              'Recent Searches',
+                              style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
                         ),
-                        const SizedBox(height: 24),
-                        _buildStatCards(context, stats),
-                        const SizedBox(height: 48),
-                        Text(
-                          'Recent Searches',
-                          style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                    ),
-                  ),
-                ),
-                historyState.when(
-                  data: (history) {
-                    if (history.isEmpty) {
-                      return SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                          child: Text('No search history yet. Go to Generate to start.', style: GoogleFonts.inter(color: const Color(0xFF94A3B8))),
-                        ),
-                      );
-                    }
-                    return SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final item = history[index];
-                          return _buildHistoryCard(context, item);
-                        },
-                        childCount: history.length,
                       ),
-                    );
-                  },
-                  loading: () => const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator())),
-                  error: (e, st) => SliverToBoxAdapter(child: Center(child: Text('Error: $e', style: const TextStyle(color: Colors.red)))),
+                    ),
+                    historyState.when(
+                      data: (history) {
+                        if (history.isEmpty) {
+                          return SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                              child: Text('No search history yet. Go to Generate to start.', style: GoogleFonts.inter(color: const Color(0xFF94A3B8))),
+                            ),
+                          );
+                        }
+                        return SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final item = history[index];
+                              return _buildHistoryCard(context, item);
+                            },
+                            childCount: history.length,
+                          ),
+                        );
+                      },
+                      loading: () => const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator())),
+                      error: (e, st) => SliverToBoxAdapter(child: Center(child: Text('Error: $e', style: const TextStyle(color: Colors.red)))),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 32)),
+                  ],
                 ),
-                const SliverToBoxAdapter(child: SizedBox(height: 32)),
-              ],
-            ),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF3B82F6))),
+            error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.red))),
           ),
         ],
       ),

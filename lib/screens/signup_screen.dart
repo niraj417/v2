@@ -36,7 +36,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       await TeamService().initializeUserProfile();
       
       if (mounted) {
-        context.go('/');
+        GoRouter.of(context).go('/');
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
@@ -70,7 +70,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       await FirebaseAuth.instance.signInWithCredential(credential);
       await TeamService().initializeUserProfile();
       if (mounted) {
-        context.go('/');
+        GoRouter.of(context).go('/');
       }
     } catch (e) {
       if (mounted) {
@@ -236,7 +236,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                               children: [
                                 const Text("Already have an account?", style: TextStyle(color: Colors.white70)),
                                 TextButton(
-                                  onPressed: () => context.go('/login'), // Route properly instead of piling up
+                                  onPressed: () => GoRouter.of(context).go('/login'), // Route properly instead of piling up
                                   child: const Text('Sign In', style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
                                 ),
                               ],
