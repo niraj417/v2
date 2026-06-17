@@ -54,7 +54,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      final GoogleSignInAccount? googleUser = await GoogleSignIn(
+        serverClientId: '384227067713-q593c9dqv59d4qpjtdnnogqqosa25d7t.apps.googleusercontent.com',
+      ).signIn();
       if (googleUser == null) {
         setState(() => _isLoading = false);
         return;
